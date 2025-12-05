@@ -1,5 +1,5 @@
 # config.py
-
+import numpy as np
 # --- PARAMETRI GENERALI DEL PROGETTO ---
 # Utili per M2, M3 e M4
 VIDEO_FPS = 60           # Fotogrammi al secondo (se usi il dataset di Kaggle)
