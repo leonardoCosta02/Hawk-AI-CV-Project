@@ -23,21 +23,21 @@ PARAMS_CEMENTO = {
     'CANNY_LOW': 25,
     'CANNY_HIGH': 100,
     'HOUGH_THRESHOLD': 70, # Più alto per linee lunghe e sicure
-    'FRAME_PATH': 'data/static_images/static_court_frame_cemento.jpg',
+    'FRAME_PATH': '../data/static_images/static_court_frame_cemento.jpg',
 }
 
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
     'CANNY_HIGH': 120,
     'HOUGH_THRESHOLD': 65,
-    'FRAME_PATH': 'data/static_images/static_court_frame_erba.jpg',
+    'FRAME_PATH': '../data/static_images/static_court_frame_erba.jpg',
 }
 
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
     'CANNY_HIGH': 180,
     'HOUGH_THRESHOLD': 30, # Più basso a causa delle linee spezzate
-    'FRAME_PATH': 'data/static_images/static_court_frame_clay.jpg',
+    'FRAME_PATH': '../data/static_images/static_court_frame_clay.jpg',
 }
 
 # Mappa per accedere rapidamente
