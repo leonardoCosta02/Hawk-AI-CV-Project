@@ -2,7 +2,7 @@
 
 import cv2 as cv
 import numpy as np
-import config # Importa il file di configurazione (necessario per i parametri)
+from source import config # Importa il file di configurazione (necessario per i parametri)
 
 def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
     """
