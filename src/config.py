@@ -1,20 +1,29 @@
 # config.py
 import numpy as np
+
 # --- PARAMETRI GENERALI DEL PROGETTO ---
 # Utili per M2, M3 e M4
-VIDEO_FPS = 60           # Fotogrammi al secondo (se usi il dataset di Kaggle)
-COURT_WIDTH_METERS = 10.97 # Larghezza del campo da tennis (regola base)
-COURT_LENGTH_METERS = 23.77 # Lunghezza del campo
-FRAME_WIDTH = 1280       # Larghezza in pixel del frame che usi (ad esempio)
-FRAME_HEIGHT = 720       # Altezza in pixel del frame che usi (ad esempio)
+VIDEO_FPS = 60           
+COURT_WIDTH_METERS = 10.97 
+COURT_LENGTH_METERS = 23.77 
+FRAME_WIDTH = 1280       
+FRAME_HEIGHT = 720       
 
 # --- PARAMETRI DI HOUGH COMUNI (M1) ---
 # Questi possono restare fissi o essere ottimizzati separatamente
 HOUGH_COMMON_PARAMS = {
-    'RHO': 1,              # Risoluzione della distanza in pixel
-    'THETA': np.pi / 180,  # Risoluzione dell'angolo in radianti
-    'MIN_LENGTH': 40,      # Lunghezza minima in pixel di un segmento di linea
-    'MAX_GAP': 15,         # Distanza massima per unire due segmenti vicini
+    'RHO': 1,              
+    'THETA': np.pi / 180,  
+    'MIN_LENGTH': 40,      
+    'MAX_GAP': 15,         
+}
+
+# --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO (NUOVA VARIABILE) ---
+# Usa questi percorsi per caricare le immagini statiche in modo pulito
+CAMPI_PATH = {
+    "CEMENTO": 'data/static_images/static_court_frame_cemento.jpg',
+    "ERBA": 'data/static_images/static_court_frame_erba.jpg',
+    "TERRA_BATTUTA": 'data/static_images/static_court_frame_clay.jpg',
 }
 
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
@@ -22,22 +31,22 @@ HOUGH_COMMON_PARAMS = {
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,
     'CANNY_HIGH': 100,
-    'HOUGH_THRESHOLD': 70, # Più alto per linee lunghe e sicure
-    'FRAME_PATH': 'data/static_images/static_court_frame_cemento.jpg',
+    'HOUGH_THRESHOLD': 70, 
+    'FRAME_PATH': CAMPI_PATH['CEMENTO'], # Usa la variabile definita sopra
 }
 
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
     'CANNY_HIGH': 120,
     'HOUGH_THRESHOLD': 65,
-    'FRAME_PATH': 'data/static_images/static_court_frame_erba.jpg',
+    'FRAME_PATH': CAMPI_PATH['ERBA'], # Usa la variabile definita sopra
 }
 
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
     'CANNY_HIGH': 180,
-    'HOUGH_THRESHOLD': 30, # Più basso a causa delle linee spezzate
-    'FRAME_PATH': 'data/static_images/static_court_frame_clay.jpg',
+    'HOUGH_THRESHOLD': 30, 
+    'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'], # Usa la variabile definita sopra
 }
 
 # Mappa per accedere rapidamente
