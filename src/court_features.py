@@ -47,9 +47,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     
     # All'interno di src/court_features.py, modifica la sezione 5. OUTPUT
 
-    # 1. Recupera il parametro MAX_LENGTH
-    common_hough = config.HOUGH_COMMON_PARAMS
-    MAX_PIXEL_LENGTH = common_hough['MAX_LENGTH'] # Nuovo parametro
+    
 
     # 5. OUTPUT
     if raw_lines is not None:
