@@ -1,150 +1,53 @@
 import cv2 as cv
 import numpy as np
-from src import config
 
-
-# -------------------------------
-#  SUPPORT FUNCTIONS
-# -------------------------------
-
-def line_angle(x1, y1, x2, y2):
-    """Restituisce l'angolo in gradi di un segmento."""
-    return abs(np.degrees(np.arctan2(y2 - y1, x2 - x1)))
-
-
-def filter_by_angle(lines, tol=10):
-    """Filtra solo linee orizzontali o verticali entro una certa tolleranza."""
-    filtered = []
-    for x1, y1, x2, y2 in lines:
-        a = line_angle(x1, y1, x2, y2)
-        if a < tol or abs(a - 180) < tol:   # orizzontali
-            filtered.append([x1, y1, x2, y2])
-        elif abs(a - 90) < tol:            # verticali
-            filtered.append([x1, y1, x2, y2])
-    return filtered
-
-
-def cluster_lines(lines, axis='h', tol=8):
+def trova_linee(image_data: np.ndarray, canny_low_threshold: int, canny_high_threshold: int, 
+                hough_threshold: int, hough_min_length: int, hough_max_gap: int) -> np.ndarray:
     """
-    Raggruppa linee parallele entro una certa distanza.
-    axis='h' → cluster orizzontali (simile y)
-    axis='v' → cluster verticali   (simile x)
-    """
-    if not lines:
-        return []
+    Esegue il preprocessing (Blur) e l'estrazione delle linee (Canny + Hough) da un frame.
 
-    lines = sorted(lines, key=lambda L: L[1] if axis == 'h' else L[0])
-    merged = []
-    group = [lines[0]]
+    Args:
+        image_data: Il frame statico del campo da tennis letto da OpenCV.
+        canny_low_threshold: Soglia inferiore per l'Edge Detection di Canny.
+        canny_high_threshold: Soglia superiore per l'Edge Detection di Canny.
+        hough_threshold: Numero minimo di intersezioni per essere considerata una linea.
+        hough_min_length: Lunghezza minima della linea da rilevare.
+        hough_max_gap: Distanza massima tra segmenti di linea per essere considerati una singola linea.
 
-    for line in lines[1:]:
-        if axis == 'h':   # confronto su y
-            if abs(line[1] - group[-1][1]) < tol:
-                group.append(line)
-            else:
-                merged.append(np.mean(group, axis=0).astype(int).tolist())
-                group = [line]
-        else:             # confronto su x
-            if abs(line[0] - group[-1][0]) < tol:
-                group.append(line)
-            else:
-                merged.append(np.mean(group, axis=0).astype(int).tolist())
-                group = [line]
-
-    merged.append(np.mean(group, axis=0).astype(int).tolist())
-    return merged
-
-
-def extend_line(line):
-    """Estende una linea orizzontale o verticale al bounding completo del gruppo."""
-    x1, y1, x2, y2 = line
-
-    # Orizzontale
-    if abs(y1 - y2) < 5:
-        return [min(x1, x2), y1, max(x1, x2), y1]
-
-    # Verticale
-    else:
-        return [x1, min(y1, y2), x1, max(y1, y2)]
-
-
-# -------------------------------
-#  MAIN FUNCTION
-# -------------------------------
-
-def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
-    """
-    Estrae le linee del campo con pulizia avanzata:
-      - Filtering angolare
-      - Clustering linee parallele
-      - Merge segmenti spezzati
-      - Filtraggio per lunghezza
+    Returns:
+        Un array NumPy contenente i segmenti di linea raw in formato [[x1, y1, x2, y2], ...]. 
+        L'output sarà usato dal Membro 3.
     """
     if image_data is None:
         return np.array([])
-
-    params = config.ALL_SURFACE_PARAMS.get(surface_type.upper(), config.PARAMS_CEMENTO)
-    hough_common = config.HOUGH_COMMON_PARAMS
-
-    # -------------------------------------
-    # 1) PREPROCESSING
-    # -------------------------------------
+    
+    # 1. PREPROCESSING [cite: 14]
+    # Conversione in Grayscale
     gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
+    
+    # Applicazione di Gaussian Blur per minimizzare il rumore dalla superficie del campo [cite: 14]
+    # Kernel size 5x5 è standard.
     blurred = cv.GaussianBlur(gray, (5, 5), 0)
-    edges = cv.Canny(blurred, params['CANNY_LOW'], params['CANNY_HIGH'])
 
-    # -------------------------------------
-    # 2) HOUGH LINES
-    # -------------------------------------
-    raw = cv.HoughLinesP(
+    # 2. EDGE DETECTION (Canny) [cite: 15]
+    # Identifica le transizioni ad alto gradiente (le linee bianche)
+    edges = cv.Canny(blurred, canny_low_threshold, canny_high_threshold)
+    
+    # 3. LINE DETECTION (Probabilistic Hough Transform) [cite: 16]
+    # Converte i pixel dei bordi in segmenti vettoriali
+    raw_lines = cv.HoughLinesP(
         edges,
-        rho=hough_common['RHO'],
-        theta=hough_common['THETA'],
-        threshold=params['HOUGH_THRESHOLD'],
-        minLineLength=hough_common['MIN_LENGTH'],
-        maxLineGap=hough_common['MAX_GAP']
+        rho=1, # Risoluzione della distanza in pixel
+        theta=np.pi / 180, # Risoluzione dell'angolo in radianti
+        threshold=hough_threshold,
+        minLineLength=hough_min_length,
+        maxLineGap=hough_max_gap
     )
 
-    if raw is None:
+    # 4. OUTPUT [cite: 17]
+    if raw_lines is not None:
+        # Formatta l'output in un array [x1, y1, x2, y2]
+        lines_list = raw_lines.reshape(-1, 4)
+        return lines_list
+    else:
         return np.array([])
-
-    lines = raw.reshape(-1, 4)
-
-    # -------------------------------------
-    # 3) FILTRO ANGOLARE
-    # -------------------------------------
-    lines = filter_by_angle(lines)
-
-    if not lines:
-        return np.array([])
-
-    # -------------------------------------
-    # 4) SEPARA ORIZZONTALI E VERTICALI
-    # -------------------------------------
-    horiz = [L for L in lines if abs(line_angle(*L) - 0) < 10 or abs(line_angle(*L) - 180) < 10]
-    vert =  [L for L in lines if abs(line_angle(*L) - 90) < 10]
-
-    # -------------------------------------
-    # 5) CLUSTER LINEE PARALLELE
-    # -------------------------------------
-    horiz = cluster_lines(horiz, axis='h')
-    vert  = cluster_lines(vert, axis='v')
-
-    # -------------------------------------
-    # 6) MERGE (ESTENSIONE) SEGMENTI
-    # -------------------------------------
-    horiz = [extend_line(L) for L in horiz]
-    vert  = [extend_line(L) for L in vert]
-
-    # -------------------------------------
-    # 7) FILTRO LUNGHEZZA MINIMA
-    # -------------------------------------
-    #h, w = image_data.shape[:2]
-   # min_len = w * 0.25
-
-    final = []
-    for x1, y1, x2, y2 in horiz + vert:
-        if np.hypot(x2 - x1, y2 - y1) >= min_len:
-            final.append([x1, y1, x2, y2])
-
-    return np.array(final)
