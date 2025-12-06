@@ -49,5 +49,6 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     if raw_lines is not None:
         # Riformatta raw_lines in un array 2D
         line_segments = raw_lines.reshape(-1, 4)
+        return line_segments
     else:
         return np.array([])
