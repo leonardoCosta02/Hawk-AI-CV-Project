@@ -39,8 +39,8 @@ PARAMS_CEMENTO = {
 # -----------------
 PARAMS_ERBA = {
     'CANNY_LOW': 30,         # Soglia Bassa: Leggermente più alta del cemento, per ignorare la granulosità di base.
-    'CANNY_HIGH': 120,       # Soglia Alta: Più alta (120) per ignorare l'intera texture dell'erba e accettare solo le linee bianche.
-    'HOUGH_THRESHOLD': 65,   # Soglia di Votazione Hough: Media/Alta. Simile al cemento, richiede linee ben definite.
+    'CANNY_HIGH': 220,       # Soglia Alta: Più alta (120) per ignorare l'intera texture dell'erba e accettare solo le linee bianche.
+    'HOUGH_THRESHOLD': 75,   # Soglia di Votazione Hough: Media/Alta. Simile al cemento, richiede linee ben definite.
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
@@ -49,8 +49,8 @@ PARAMS_ERBA = {
 # -----------------
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,         # Soglia Bassa: La più alta (40) per filtrare il rumore evidente della terra battuta.
-    'CANNY_HIGH': 180,       # Soglia Alta: Molto alta (180). Solo i salti di intensità fortissimi (le linee bianche) sono considerati 'certi'.
-    'HOUGH_THRESHOLD': 30,   # Soglia di Votazione Hough: Bassa. Necessaria perché le linee sono spezzate/usurate; un segmento reale non ha molti pixel continui che votano.
+    'CANNY_HIGH': 240,       # Soglia Alta: Molto alta (180). Solo i salti di intensità fortissimi (le linee bianche) sono considerati 'certi'.
+    'HOUGH_THRESHOLD': 60,   # Soglia di Votazione Hough: Bassa. Necessaria perché le linee sono spezzate/usurate; un segmento reale non ha molti pixel continui che votano.
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
