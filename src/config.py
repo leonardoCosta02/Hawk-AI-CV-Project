@@ -7,7 +7,7 @@ import numpy as np # Necessario per definire la costante matematica 'np.pi'
 HOUGH_COMMON_PARAMS = {
     'RHO': 1,               # Risoluzione della distanza (Rho): 1 pixel. Non si tocca quasi mai.
     'THETA': np.pi / 180,   # Risoluzione dell'angolo (Theta): 1 grado (pi/180). Non si tocca mai.
-    'MIN_LENGTH': 40,       # Lunghezza minima (in pixel) che un segmento deve avere per essere rilevato. 
+    'MIN_LENGTH': 60,       # Lunghezza minima (in pixel) che un segmento deve avere per essere rilevato. 
                             # Alto per ignorare frammenti di rumore.
     'MAX_GAP': 15,          # Distanza massima (in pixel) tra due segmenti per unirli in un'unica linea. 
                             # Utile per ricongiungere linee spezzate dalle ombre o dalla terra battuta.
@@ -29,7 +29,7 @@ CAMPI_PATH = {
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,         # Soglia Bassa Canny: Bassa per catturare bordi deboli che sono connessi.
     'CANNY_HIGH': 100,       # Soglia Alta Canny: Bassa/Media, sufficiente per definire le linee bianche come 'bordi certi'.
-    'HOUGH_THRESHOLD': 70,   # Soglia di Votazione Hough: Alta. Richiediamo molti pixel per linea, perché il contrasto è buono.
+    'HOUGH_THRESHOLD': 85,   # Soglia di Votazione Hough: Alta. Richiediamo molti pixel per linea, perché il contrasto è buono.
     'FRAME_PATH': CAMPI_PATH['CEMENTO'], # Percorso specifico del frame.
 }
 
