@@ -139,8 +139,8 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     # -------------------------------------
     # 7) FILTRO LUNGHEZZA MINIMA
     # -------------------------------------
-    h, w = image_data.shape[:2]
-    min_len = w * 0.25
+    #h, w = image_data.shape[:2]
+   # min_len = w * 0.25
 
     final = []
     for x1, y1, x2, y2 in horiz + vert:
