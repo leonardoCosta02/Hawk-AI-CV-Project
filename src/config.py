@@ -11,7 +11,7 @@ HOUGH_COMMON_PARAMS = {
                             # Alto per ignorare frammenti di rumore.
     'MAX_GAP': 15,          # Distanza massima (in pixel) tra due segmenti per unirli in un'unica linea. 
                             # Utile per ricongiungere linee spezzate dalle ombre o dalla terra battuta.
-    'ANGLE_TOLERANCE_DEG': 5
+    
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
