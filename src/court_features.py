@@ -1,53 +1,73 @@
+# src/court_features.py - Versione finale pulita
+
 import cv2 as cv
 import numpy as np
+from src import config # Importa il file di configurazione (necessario per i parametri)
 
-def trova_linee(image_data: np.ndarray, canny_low_threshold: int, canny_high_threshold: int, 
-                hough_threshold: int, hough_min_length: int, hough_max_gap: int) -> np.ndarray:
+def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
     """
-    Esegue il preprocessing (Blur) e l'estrazione delle linee (Canny + Hough) da un frame.
+    Esegue il preprocessing e l'estrazione delle linee, usando i parametri
+    ottimali specifici per la superficie definiti in config.py.
 
     Args:
         image_data: Il frame statico del campo da tennis letto da OpenCV.
-        canny_low_threshold: Soglia inferiore per l'Edge Detection di Canny.
-        canny_high_threshold: Soglia superiore per l'Edge Detection di Canny.
-        hough_threshold: Numero minimo di intersezioni per essere considerata una linea.
-        hough_min_length: Lunghezza minima della linea da rilevare.
-        hough_max_gap: Distanza massima tra segmenti di linea per essere considerati una singola linea.
+        surface_type: Tipo di campo ('CEMENTO', 'ERBA', 'TERRA_BATTUTA').
 
     Returns:
         Un array NumPy contenente i segmenti di linea raw in formato [[x1, y1, x2, y2], ...]. 
-        L'output sarà usato dal Membro 3.
     """
     if image_data is None:
         return np.array([])
     
-    # 1. PREPROCESSING [cite: 14]
-    # Conversione in Grayscale
-    gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
+    # 1. RECUPERO PARAMETRI (Legge i parametri specifici per la superficie)
     
-    # Applicazione di Gaussian Blur per minimizzare il rumore dalla superficie del campo [cite: 14]
-    # Kernel size 5x5 è standard.
+    # Prende i parametri specifici per Canny/Hough
+    params = config.ALL_SURFACE_PARAMS.get(surface_type.upper(), config.PARAMS_CEMENTO)
+    # Prende i parametri di Hough comuni
+    common_hough = config.HOUGH_COMMON_PARAMS
+
+    # 2. PREPROCESSING
+    gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
     blurred = cv.GaussianBlur(gray, (5, 5), 0)
 
-    # 2. EDGE DETECTION (Canny) [cite: 15]
-    # Identifica le transizioni ad alto gradiente (le linee bianche)
-    edges = cv.Canny(blurred, canny_low_threshold, canny_high_threshold)
+    # 3. EDGE DETECTION (Canny) - Usa i parametri specifici della superficie
+    edges = cv.Canny(blurred, params['CANNY_LOW'], params['CANNY_HIGH'])
     
-    # 3. LINE DETECTION (Probabilistic Hough Transform) [cite: 16]
-    # Converte i pixel dei bordi in segmenti vettoriali
+    # 4. LINE DETECTION (Probabilistic Hough Transform) - Usa i parametri specifici
     raw_lines = cv.HoughLinesP(
         edges,
-        rho=1, # Risoluzione della distanza in pixel
-        theta=np.pi / 180, # Risoluzione dell'angolo in radianti
-        threshold=hough_threshold,
-        minLineLength=hough_min_length,
-        maxLineGap=hough_max_gap
+        rho=common_hough['RHO'],
+        theta=common_hough['THETA'],
+        threshold=params['HOUGH_THRESHOLD'], # Usa la soglia specifica
+        minLineLength=common_hough['MIN_LENGTH'],
+        maxLineGap=common_hough['MAX_GAP']
     )
 
-    # 4. OUTPUT [cite: 17]
+    # 5. OUTPUT
+    
+    # All'interno di src/court_features.py, modifica la sezione 5. OUTPUT
+
+    # 1. Recupera il parametro MAX_LENGTH
+    common_hough = config.HOUGH_COMMON_PARAMS
+    MAX_PIXEL_LENGTH = common_hough['MAX_LENGTH'] # Nuovo parametro
+
+    # 5. OUTPUT
     if raw_lines is not None:
-        # Formatta l'output in un array [x1, y1, x2, y2]
-        lines_list = raw_lines.reshape(-1, 4)
-        return lines_list
+        # Riformatta raw_lines in un array 2D
+        line_segments = raw_lines.reshape(-1, 4)
+        
+        # --- IMPLEMENTAZIONE DEL NUOVO FILTRO GEOMETRICO ---
+        filtered_lines = []
+        for x1, y1, x2, y2 in line_segments:
+            # Calcola la lunghezza del segmento utilizzando la distanza euclidea (geometria)
+            length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+            
+            # Filtro: Include la linea solo se la lunghezza è INFERIORE al valore MAX
+            if length < MAX_PIXEL_LENGTH:
+                filtered_lines.append([x1, y1, x2, y2])
+        # ----------------------------------------------------
+
+        # Restituisce l'array NumPy dei segmenti filtrati
+        return np.array(filtered_lines)
     else:
         return np.array([])
