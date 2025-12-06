@@ -45,29 +45,9 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
     # 5. OUTPUT
     
-    # All'interno di src/court_features.py, modifica la sezione 5. OUTPUT
-
-    # 1. Recupera il parametro MAX_LENGTH
-    common_hough = config.HOUGH_COMMON_PARAMS
-    MAX_PIXEL_LENGTH = common_hough['MAX_LENGTH'] # Nuovo parametro
-
-    # 5. OUTPUT
+    
     if raw_lines is not None:
         # Riformatta raw_lines in un array 2D
         line_segments = raw_lines.reshape(-1, 4)
-        
-        # --- IMPLEMENTAZIONE DEL NUOVO FILTRO GEOMETRICO ---
-        filtered_lines = []
-        for x1, y1, x2, y2 in line_segments:
-            # Calcola la lunghezza del segmento utilizzando la distanza euclidea (geometria)
-            length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-            
-            # Filtro: Include la linea solo se la lunghezza è INFERIORE al valore MAX
-            if length < MAX_PIXEL_LENGTH:
-                filtered_lines.append([x1, y1, x2, y2])
-        # ----------------------------------------------------
-
-        # Restituisce l'array NumPy dei segmenti filtrati
-        return np.array(filtered_lines)
     else:
         return np.array([])
