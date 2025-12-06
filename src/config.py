@@ -11,7 +11,7 @@ HOUGH_COMMON_PARAMS = {
                             # Alto per ignorare frammenti di rumore.
     'MAX_GAP': 15,          # Distanza massima (in pixel) tra due segmenti per unirli in un'unica linea. 
                             # Utile per ricongiungere linee spezzate dalle ombre o dalla terra battuta.
-    'MAX_LENGTH': 400, # Esempio: Il campo è largo 1280px, una linea non dovrebbe essere più lunga di 800px
+    'MAX_LENGTH': 200, # Esempio: Il campo è largo 1280px, una linea non dovrebbe essere più lunga di 800px
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
