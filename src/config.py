@@ -60,3 +60,38 @@ ALL_SURFACE_PARAMS = {
     'ERBA': PARAMS_ERBA,
     'TERRA_BATTUTA': PARAMS_TERRA_BATTUTA,
 } # Dizionario centrale usato nel loop (Cella 3) per recuperare l'intero set di parametri per una data superficie.
+
+
+# Aggiungi questa nuova sezione in config.py
+# (Dimensioni standard del campo da tennis in metri)
+
+COURT_DIMENSIONS_METERS = {
+    'SINGOLO_LARGHEZZA': 8.23,  # Larghezza campo singolo (27 ft)
+    'DOPPIO_LARGHEZZA': 10.97, # Larghezza campo doppio (36 ft)
+    'LUNGHEZZA_TOTALE': 23.77, # Lunghezza totale del campo (78 ft)
+    'SERVIZIO_RETE': 6.40,     # Distanza Rete a Linea di Servizio (21 ft)
+    'BASE_SERVIZIO': 5.49,     # Distanza Linea Servizio a Linea di Fondo (18 ft)
+}
+
+# Definiamo 8 Punti di Riferimento (Corners of the court + T-junctions)
+# Usiamo il campo doppio (10.97 x 23.77m)
+# Assumiamo l'origine (0, 0) nell'angolo in basso a sinistra della linea di fondo.
+
+POINTS_WORLD_METERS = np.float32([
+    # X (Larghezza)        Y (Lunghezza)
+    # Angoli linea di fondo (Base-line corners)
+    [0.0, 0.0],                          # 1. Angolo in basso a sinistra (X0, Y0)
+    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], 0.0], # 2. Angolo in basso a destra (Xmax, Y0)
+    
+    # Intersezioni Linea di Servizio (Service-line intersections)
+    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 3. Lato sinistro linea servizio
+    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 4. Lato destro linea servizio
+    
+    # Rete
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 5. Lato sinistro della Rete
+    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 6. Lato destro della Rete
+    
+    # Centro della Linea di Servizio (T-junctions)
+    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Linea di Servizio T-junction (inferiore)
+    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Linea di Servizio T-junction (superiore)
+])
