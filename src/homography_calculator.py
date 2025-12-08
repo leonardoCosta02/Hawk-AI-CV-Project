@@ -4,40 +4,37 @@ import numpy as np
 import math
 from . import config # Importa i punti fissi in metri
 
-# --- 1. FUNZIONE PER TROVARE L'INTERSEZIONE TRA DUE LINEE ---
-# Basata sulla forma parametrica dei segmenti di linea
+# ==============================================================================
+# 1. FUNZIONE PER TROVARE L'INTERSEZIONE TRA DUE LINEE
+# ==============================================================================
 def find_intersection(segment1: np.ndarray, segment2: np.ndarray) -> tuple:
     """
-    Trova il punto di intersezione tra due segmenti di linea.
+    Trova il punto di intersezione tra due segmenti di linea in forma di retta.
     Ritorna (x, y) se c'è un'intersezione, altrimenti (None, None).
     I segmenti sono passati come array [x1, y1, x2, y2].
     """
     x1, y1, x2, y2 = segment1
     x3, y3, x4, y4 = segment2
 
-    # Calcola il denominatore D della formula di intersezione
+    # Calcola il denominatore D (determinante)
     D = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
 
     # Se D è zero, le linee sono parallele e non si intersecano.
     if D == 0:
         return None, None
 
-    # Calcola il numeratore
+    # Calcola il parametro t
     t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / D
-    # u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / D
 
     # Calcola il punto di intersezione (pixel)
     Px = x1 + t * (x2 - x1)
     Py = y1 + t * (y2 - y1)
     
-    # Opzionale: Aggiungere un controllo per assicurarsi che l'intersezione
-    # cada all'interno dei segmenti, ma per le linee del campo usiamo
-    # l'intersezione della retta, non solo del segmento.
-
     return Px, Py
 
-# --- 2. LOGICA PRINCIPALE PER IL CALCOLO DELL'OMOGRAFIA ---
-
+# ==============================================================================
+# 2. LOGICA PRINCIPALE PER IL CALCOLO DELL'OMOGRAFIA (M3)
+# ==============================================================================
 def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
     """
     Trova un set di punti chiave dall'immagine (pixel) e li mappa ai punti
@@ -50,95 +47,132 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     Returns:
         La Matrice di Omografia H (3x3) o None se il calcolo fallisce.
     """
-    if all_line_segments.size < 4: # Richiede almeno 4 segmenti per iniziare a cercare 4 intersezioni
-        print("Errore: Output del Membro 1 insufficiente.")
+    # Necessitiamo di almeno 4 segmenti per tentare di trovare 4 angoli.
+    if all_line_segments.size < 4: 
+        print(f"Errore: Output del Membro 1 insufficiente ({all_line_segments.size // 4} segmenti trovati).")
         return None
 
-    # Vengono selezionati 4 punti per l'esempio (di solito se ne usano di più per RANSAC)
-    # Per semplificare, assumiamo che i segmenti puliti del Cemento contengano le 4 linee principali:
-    # 2 laterali (quasi verticali) e 2 di fondo (quasi orizzontali).
-
-    # --- FASE A: Ricerca Heuristica dei Punti Immagine (Esempio Semplificato) ---
-
-    # Ordina i segmenti per angolo e posizione per trovare i candidati migliori
-    # (Questo è il passo più difficile e di solito richiede l'algoritmo RANSAC)
-
-    # In questo esempio, prenderemo solo i primi 4 segmenti (ASSUMENDO che siano i migliori)
-    # e li incroceremo per trovare 4 angoli.
+    # --- FASE A: SELEZIONE EURISTICA DEI SEGMENTI CHIAVE ---
     
-    if len(all_line_segments) < 4:
-        print("Meno di 4 segmenti disponibili per il calcolo.")
+    # 1. Calcola l'angolo di ogni segmento
+    angles_rad = np.arctan2(all_line_segments[:, 3] - all_line_segments[:, 1], 
+                            all_line_segments[:, 2] - all_line_segments[:, 0])
+    angles_deg = np.abs(np.degrees(angles_rad) % 180) # Normalizza a [0, 180]
+
+    # 2. Definisci i criteri angolari basati sul parametro di tolleranza
+    ANGLE_TOLERANCE = config.HOUGH_COMMON_PARAMS.get('ANGLE_TOLERANCE_DEG', 5)
+    
+    # Linee Orizzontali (vicino a 0° o 180°)
+    is_horizontal = (angles_deg < ANGLE_TOLERANCE) | (angles_deg > 180 - ANGLE_TOLERANCE)
+    
+    # Linee Verticali (vicino a 90°)
+    is_vertical = (angles_deg > 90 - ANGLE_TOLERANCE) & (angles_deg < 90 + ANGLE_TOLERANCE)
+
+    # 3. Filtra i segmenti nei due gruppi
+    horizontal_segments = all_line_segments[is_horizontal]
+    vertical_segments = all_line_segments[is_vertical]
+
+    if len(horizontal_segments) < 2 or len(vertical_segments) < 2:
+        print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
+        return None
+
+    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
+    
+    # L'euristica cerca i segmenti che definiscono la metà campo più vicina (i 4 punti di ancoraggio).
+    
+    # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame)
+    h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2
+    base_line_index = np.argmax(h_y_coords)
+    base_line = horizontal_segments[base_line_index]
+
+    # 2. Linea Verticale Sinistra (Left Line: la più a sinistra nel frame)
+    v_x_coords = (vertical_segments[:, 0] + vertical_segments[:, 2]) / 2
+    left_line_index = np.argmin(v_x_coords)
+    left_line = vertical_segments[left_line_index]
+
+    # 3. Linea Verticale Destra (Right Line: la più a destra nel frame)
+    right_line_index = np.argmax(v_x_coords)
+    right_line = vertical_segments[right_line_index]
+    
+    # 4. Linea Orizzontale di Servizio (Service Line: la più in alto tra le restanti orizzontali)
+    h_y_coords_filtered = np.delete(h_y_coords, base_line_index)
+    h_segments_filtered = np.delete(horizontal_segments, base_line_index, axis=0)
+    
+    if len(h_segments_filtered) > 0:
+        service_line_index = np.argmin(h_y_coords_filtered)
+        service_line = h_segments_filtered[service_line_index]
+    else:
+        print("Meno di 2 linee orizzontali trovate. Il calcolo fallirà.")
+        return None
+
+
+    # --- FASE C: CALCOLO DELLE 4 INTERSEZIONI (PUNTI PIXEL) ---
+    
+    # 1. Angolo in basso a sinistra (Corrisponde a [0.0, 0.0] metri)
+    p1x, p1y = find_intersection(base_line, left_line)
+    
+    # 2. Angolo in basso a destra (Corrisponde a [Xmax, 0.0] metri)
+    p2x, p2y = find_intersection(base_line, right_line)
+    
+    # 3. Angolo Servizio Sinistra (Corrisponde a [0.0, Yservice] metri)
+    p3x, p3y = find_intersection(service_line, left_line)
+    
+    # 4. Angolo Servizio Destra (Corrisponde a [Xmax, Yservice] metri)
+    p4x, p4y = find_intersection(service_line, right_line)
+    
+    # Controllo di validità
+    if None in [p1x, p2x, p3x, p4x]:
+        print("Errore: Impossibile trovare tutte le 4 intersezioni chiave (linee parallele o non trovate).")
         return None
         
-    # Useremo solo 4 coppie di punti per DLT (necessarie 4+)
-    # Assumiamo di voler trovare i 4 angoli della metà campo più vicina.
-    
-    # [Qui andrebbe il codice avanzato RANSAC per selezionare i segmenti corretti]
-    # Usiamo un'euristica molto semplice:
-    
-    # Ad esempio, prendiamo i primi 4 segmenti e calcoliamo l'intersezione tra S1-S3, S2-S4, ecc.
-    # Questo è un placeholder e andrebbe migliorato con il tuo output reale!
-    
-    # In un sistema reale, dovresti trovare:
-    # 1. La linea più verticale a sinistra (segmento A)
-    # 2. La linea più verticale a destra (segmento B)
-    # 3. La linea più orizzontale in basso (segmento C)
-    # 4. La linea di servizio orizzontale (segmento D)
-
-    # Per il momento, usiamo i primi 4 segmenti e li incrociamo (risultato NON garantito):
-    
-    # Si suppone che M3 fornisca un algoritmo per identificare i segmenti chiave (es. i 4 angoli del campo)
-    # In questa simulazione, usiamo un placeholder:
-    
+    # Costruisci l'array dei punti immagine (pixel)
     points_image_pixel = np.float32([
-        [100, 500],  # Angolo 1 (Pixel) - Placeholder
-        [800, 500],  # Angolo 2 (Pixel) - Placeholder
-        [100, 100],  # Angolo 3 (Pixel) - Placeholder
-        [800, 100],  # Angolo 4 (Pixel) - Placeholder
+        [p1x, p1y],  
+        [p2x, p2y],  
+        [p3x, p3y],  
+        [p4x, p4y],  
+    ])
+
+    # --- FASE D: CALCOLO FINALE OMOGRAFIA ---
+    
+    # Prende i 4 punti corrispondenti dal mondo reale in config.py
+    # L'ordine DEVE corrispondere all'ordine dei punti pixel calcolati sopra.
+    points_world_sample = np.float32([
+        config.POINTS_WORLD_METERS[0], # 1. Angolo in basso a sinistra (0.0, 0.0)
+        config.POINTS_WORLD_METERS[1], # 2. Angolo in basso a destra (Xmax, 0.0)
+        config.POINTS_WORLD_METERS[2], # 3. Lato sinistro linea servizio (0.0, Yservice)
+        config.POINTS_WORLD_METERS[3]  # 4. Lato destro linea servizio (Xmax, Yservice)
     ])
     
-    # --- FASE B: Calcolo dell'Omografia ---
-
-    # Prendi solo i primi 4 punti dal mondo reale che corrispondono ai 4 angoli nell'esempio
-    # (Angoli di fondo + Angoli di servizio lato sinistro e destro)
-    points_world_sample = config.POINTS_WORLD_METERS[:4]
-    
-    if points_image_pixel.shape[0] < 4 or points_world_sample.shape[0] < 4:
-        print("Errore: Necessari almeno 4 punti corrispondenti per l'omografia.")
-        return None
-
-    # cv.findHomography richiede i punti immagine e i punti mondo
+    # Usa cv.RANSAC per tollerare errori nei punti pixel
     H, mask = cv.findHomography(points_image_pixel, points_world_sample, cv.RANSAC, 5.0)
 
-    # H è la Matrice 3x3 di Omografia
     if H is not None:
         print(f"\nMatrice di Omografia H calcolata con successo.")
     
-    # Restituisce la matrice H (3x3)
     return H
 
-# --- ESEMPIO DI UTILIZZO PER MAPPARE UN PUNTO ---
+# ==============================================================================
+# 3. FUNZIONE DI MAPPATURA (Utilità)
+# ==============================================================================
 def map_pixel_to_world(H: np.ndarray, pixel_coords: tuple) -> np.ndarray:
     """
     Applica la Matrice di Omografia H per mappare un punto pixel (u, v)
-    alle coordinate del mondo reale (X, Y).
+    alle coordinate del mondo reale (X, Y) in metri.
     """
     if H is None:
         return None
         
     u, v = pixel_coords
     
-    # Trasforma le coordinate pixel in coordinate omogenee (u, v, 1)
+    # 1. Trasforma le coordinate pixel in coordinate omogenee (u, v, 1)
     pixel_homogeneous = np.array([u, v, 1], dtype=np.float32)
     
-    # Moltiplica H per il vettore di coordinate pixel
+    # 2. Moltiplica H per il vettore di coordinate pixel (H * p)
     world_homogeneous = H @ pixel_homogeneous
     
-    # Normalizza (dividi per la terza coordinata, w)
+    # 3. Normalizza (divisione per la terza coordinata 'w')
     X = world_homogeneous[0] / world_homogeneous[2]
     Y = world_homogeneous[1] / world_homogeneous[2]
     
     return np.array([X, Y])
-
-# Esempio per M3: 
-# M3, prendendo un punto in pixel, può calcolarne la posizione reale in metri.
