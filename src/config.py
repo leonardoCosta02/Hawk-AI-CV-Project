@@ -76,7 +76,7 @@ COURT_DIMENSIONS_METERS = {
 # Definiamo 8 Punti di Riferimento (Corners of the court + T-junctions)
 # Usiamo il campo doppio (10.97 x 23.77m)
 # Assumiamo l'origine (0, 0) nell'angolo in basso a sinistra della linea di fondo.
-
+#POINTS_WORLD_METERS è: È una matrice con 8 righe E 2 colonne Ogni riga rappresenta un punto del campo da tennis Ogni punto è espresso in coordinate metriche (X, Y)
 POINTS_WORLD_METERS = np.float32([
     # X (Larghezza)        Y (Lunghezza)
     # Angoli linea di fondo (Base-line corners)
