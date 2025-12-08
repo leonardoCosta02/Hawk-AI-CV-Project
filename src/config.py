@@ -74,24 +74,31 @@ COURT_DIMENSIONS_METERS = {
 }
 
 # Definiamo 8 Punti di Riferimento (Corners of the court + T-junctions)
-# Usiamo il campo doppio (10.97 x 23.77m)
+# USIAMO IL CAMPO SINGOLO (8.23 x 23.77m)
 # Assumiamo l'origine (0, 0) nell'angolo in basso a sinistra della linea di fondo.
-#POINTS_WORLD_METERS è: È una matrice con 8 righe E 2 colonne Ogni riga rappresenta un punto del campo da tennis Ogni punto è espresso in coordinate metriche (X, Y)
 POINTS_WORLD_METERS = np.float32([
     # X (Larghezza)        Y (Lunghezza)
-    # Angoli linea di fondo (Base-line corners)
-    [0.0, 0.0],                          # 1. Angolo in basso a sinistra (X0, Y0)
-    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], 0.0], # 2. Angolo in basso a destra (Xmax, Y0)
+    # -----------------------------------------------------------------------
+    # 1. ANGOLI LINEA DI FONDO 
+    # -----------------------------------------------------------------------
+    [0.0, 0.0],                          # 1. Angolo in basso a sinistra della Linea di Fondo. (Origine)
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # 2. Angolo in basso a destra della Linea di Fondo (8.23m).
     
-    # Intersezioni Linea di Servizio (Service-line intersections)
-    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 3. Lato sinistro linea servizio
-    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 4. Lato destro linea servizio
+    # -----------------------------------------------------------------------
+    # 3. INTERSEZIONI LINEA DI SERVIZIO
+    # -----------------------------------------------------------------------
+    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 3. Intersezione sinistra tra Linea Laterale Singola e Linea di Servizio (0.0m, 6.40m).
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 4. Intersezione destra tra Linea Laterale Singola e Linea di Servizio (8.23m, 6.40m).
     
-    # Rete
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 5. Lato sinistro della Rete
-    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 6. Lato destro della Rete
+    # -----------------------------------------------------------------------
+    # 5. PUNTI SULLA RETE
+    # -----------------------------------------------------------------------
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 5. Punto sulla Linea Laterale Sinistra, all'altezza esatta della Rete.
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 6. Punto sulla Linea Laterale Destra, all'altezza esatta della Rete.
     
-    # Centro della Linea di Servizio (T-junctions)
-    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Linea di Servizio T-junction (inferiore)
-    [COURT_DIMENSIONS_METERS['DOPPIO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Linea di Servizio T-junction (superiore)
+    # -----------------------------------------------------------------------
+    # 7. CENTRI DELLE LINEE DI SERVIZIO (T-JUNCTIONS)
+    # -----------------------------------------------------------------------
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Giunzione T sulla Linea di Servizio più vicina (centro a 4.115m).
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Giunzione T sulla Linea di Servizio più lontana.
 ])
