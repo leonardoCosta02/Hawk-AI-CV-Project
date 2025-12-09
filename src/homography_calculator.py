@@ -39,30 +39,14 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     """
     Trova un set di punti chiave dall'immagine (pixel) e li mappa ai punti
     corrispondenti nel mondo reale (metri) per calcolare la Matrice H.
-
-    Args:
-        all_line_segments: L'output del Membro 1 (array N x 4 di segmenti [x1, y1, x2, y2]).
-        surface_type: Tipo di campo (usato per debug o parametri futuri).
-
-    Returns:
-        La Matrice di Omografia H (3x3) o None se il calcolo fallisce.
     """
     # Necessitiamo di almeno 4 segmenti per tentare di trovare 4 angoli.
     if all_line_segments.size < 4: 
         print(f"Errore: Output del Membro 1 insufficiente ({all_line_segments.size // 4} segmenti trovati).")
         return None
         
-         """
-         📐 1. Obiettivo della Fase A: Classificazione GeometricaL'obiettivo di questa fase è prendere l'array di tutti i segmenti trovati da M1
-         ($\texttt{all\_line\_segments}$) e dividerli in due gruppi distinti basati sull'angolo:
-         Segmenti Orizzontali (Baselines, Service lines): Le linee che attraversano il campo.
-         Segmenti Verticali (Sidelines, Center lines): Le linee che corrono per la lunghezza del campo.
-         Questo è necessario perché, per trovare l'angolo del campo (ad esempio, l'angolo in basso a sinistra), devi intersecare una linea del gruppo Orizzontale (la linea di fondo) con una linea del gruppo Verticale (la linea laterale)
-         
-         
-         """
     # --- FASE A: SELEZIONE EURISTICA DEI SEGMENTI CHIAVE ---
-    
+    # Lo scopo è filtrare i segmenti diagonali o casuali e dividere in gruppi (orizzontali/verticali).
     
     # 1. Calcola l'angolo di ogni segmento
     angles_rad = np.arctan2(all_line_segments[:, 3] - all_line_segments[:, 1], 
@@ -78,7 +62,7 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     # Linee Verticali (vicino a 90°)
     is_vertical = (angles_deg > 90 - ANGLE_TOLERANCE) & (angles_deg < 90 + ANGLE_TOLERANCE)
 
-    # 3. Filtra i segmenti nei due gruppi
+    # 3. Filtra i segmenti nei due gruppi (Boolean Indexing)
     horizontal_segments = all_line_segments[is_horizontal]
     vertical_segments = all_line_segments[is_vertical]
 
@@ -86,19 +70,6 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
         return None
 
-    """
-  
-
-    🧭 Ruolo della Fase B: Euristica di Ancoraggio
-    Questa fase si chiama Euristica perché utilizza regole pratiche e logiche basate sull'osservazione della prospettiva della telecamera per trovare i segmenti corretti.
-
-    Obiettivo: Trovare i quattro segmenti unici che definiscono la metà campo più vicina
-    """
-
-    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
-    
-    # L'euristica cerca i segmenti che definiscono la metà campo più vicina (i 4 punti di ancoraggio).
-    
     # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
     # Questa euristica cerca i 4 segmenti che formano il rettangolo di ancoraggio (Linea di Fondo a Linea di Servizio).
 
@@ -196,9 +167,11 @@ def map_pixel_to_world(H: np.ndarray, pixel_coords: tuple) -> np.ndarray:
     pixel_homogeneous = np.array([u, v, 1], dtype=np.float32)
     
     # 2. Moltiplica H per il vettore di coordinate pixel (H * p)
+    # Questo è il cuore della trasformazione proiettiva (P' = H * p)
     world_homogeneous = H @ pixel_homogeneous
     
     # 3. Normalizza (divisione per la terza coordinata 'w')
+    # Si torna dalle coordinate omogenee 3D (wX, wY, w) a quelle euclidee 2D (X, Y)
     X = world_homogeneous[0] / world_homogeneous[2]
     Y = world_homogeneous[1] / world_homogeneous[2]
     
