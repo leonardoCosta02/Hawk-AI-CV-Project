@@ -101,4 +101,9 @@ POINTS_WORLD_METERS = np.float32([
     # -----------------------------------------------------------------------
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Giunzione T sulla Linea di Servizio più vicina (centro a 4.115m).
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Giunzione T sulla Linea di Servizio più lontana.
+    # -----------------------------------------------------------------------
+    # 9. ANGOLI LINEA DI FONDO AVVERSARIO (LONTANA)
+    # -----------------------------------------------------------------------
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 9. Angolo in alto a sinistra della Linea di Fondo Lontana (0.0m, 23.77m).
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 10. Angolo in alto a destra della Linea di Fondo Lontana (8.23m, 23.77m).
 ])
