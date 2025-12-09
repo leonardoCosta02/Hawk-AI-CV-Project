@@ -106,4 +106,9 @@ POINTS_WORLD_METERS = np.float32([
     # -----------------------------------------------------------------------
     [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 9. Angolo in alto a sinistra della Linea di Fondo Lontana (0.0m, 23.77m).
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 10. Angolo in alto a destra della Linea di Fondo Lontana (8.23m, 23.77m).
+    # -----------------------------------------------------------------------
+    # 11. *NUOVE* INTERSEZIONI LINEA DI SERVIZIO LONTANA (Y = 17.37m)
+    # -----------------------------------------------------------------------
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 11. Intersezione sinistra tra Linea Laterale e Linea di Servizio lontana
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 12. Intersezione destra tra Linea Laterale e Linea di Servizio lontana
 ])
