@@ -86,37 +86,52 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
         return None
 
+    """
+  
+
+    🧭 Ruolo della Fase B: Euristica di Ancoraggio
+    Questa fase si chiama Euristica perché utilizza regole pratiche e logiche basate sull'osservazione della prospettiva della telecamera per trovare i segmenti corretti.
+
+    Obiettivo: Trovare i quattro segmenti unici che definiscono la metà campo più vicina
+    """
+
     # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
     
     # L'euristica cerca i segmenti che definiscono la metà campo più vicina (i 4 punti di ancoraggio).
     
-    # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame)
-    h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2
-    base_line_index = np.argmax(h_y_coords)
-    base_line = horizontal_segments[base_line_index]
+    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
+    # Questa euristica cerca i 4 segmenti che formano il rettangolo di ancoraggio (Linea di Fondo a Linea di Servizio).
 
-    # 2. Linea Verticale Sinistra (Left Line: la più a sinistra nel frame)
-    v_x_coords = (vertical_segments[:, 0] + vertical_segments[:, 2]) / 2
-    left_line_index = np.argmin(v_x_coords)
-    left_line = vertical_segments[left_line_index]
-
-    # 3. Linea Verticale Destra (Right Line: la più a destra nel frame)
-    right_line_index = np.argmax(v_x_coords)
-    right_line = vertical_segments[right_line_index]
+    # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame, Y max)
+    h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2 # Calcola la Y media
+    base_line_index = np.argmax(h_y_coords) # Trova l'indice del segmento con la Y più grande (più in basso)
+    base_line = horizontal_segments[base_line_index] # Estrae il segmento della Linea di Fondo
+    
+    # 2. Linea Verticale Sinistra (Left Line: la più a sinistra nel frame, X min)
+    v_x_coords = (vertical_segments[:, 0] + vertical_segments[:, 2]) / 2 # Calcola la X media
+    left_line_index = np.argmin(v_x_coords) # Trova l'indice del segmento con la X più piccola (più a sinistra)
+    left_line = vertical_segments[left_line_index] # Estrae la Linea Laterale Sinistra
+    
+    # 3. Linea Verticale Destra (Right Line: la più a destra nel frame, X max)
+    right_line_index = np.argmax(v_x_coords) # Trova l'indice del segmento con la X più grande (più a destra)
+    right_line = vertical_segments[right_line_index] # Estrae la Linea Laterale Destra
     
     # 4. Linea Orizzontale di Servizio (Service Line: la più in alto tra le restanti orizzontali)
+    # Rimuoviamo il segmento della Base Line per cercare la seconda linea orizzontale.
     h_y_coords_filtered = np.delete(h_y_coords, base_line_index)
     h_segments_filtered = np.delete(horizontal_segments, base_line_index, axis=0)
     
     if len(h_segments_filtered) > 0:
+        # np.argmin sulla lista rimanente trova la Y più piccola (più in alto), che è la Service Line.
         service_line_index = np.argmin(h_y_coords_filtered)
         service_line = h_segments_filtered[service_line_index]
     else:
-        print("Meno di 2 linee orizzontali trovate. Il calcolo fallirà.")
+        print("Errore: Non sono state trovate almeno due linee orizzontali chiave.")
         return None
 
 
     # --- FASE C: CALCOLO DELLE 4 INTERSEZIONI (PUNTI PIXEL) ---
+    # Questa fase incrocia le 4 linee identificando i 4 angoli del rettangolo di ancoraggio.
     
     # 1. Angolo in basso a sinistra (Corrisponde a [0.0, 0.0] metri)
     p1x, p1y = find_intersection(base_line, left_line)
@@ -134,19 +149,21 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     if None in [p1x, p2x, p3x, p4x]:
         print("Errore: Impossibile trovare tutte le 4 intersezioni chiave (linee parallele o non trovate).")
         return None
-        
+    
     # Costruisci l'array dei punti immagine (pixel)
+    # L'ordine deve corrispondere ai primi 4 punti in POINTS_WORLD_METERS
     points_image_pixel = np.float32([
-        [p1x, p1y],  
-        [p2x, p2y],  
-        [p3x, p3y],  
-        [p4x, p4y],  
+        [p1x, p1y],  # Angolo 1: Base Line Sinistra
+        [p2x, p2y],  # Angolo 2: Base Line Destra
+        [p3x, p3y],  # Angolo 3: Service Line Sinistra
+        [p4x, p4y],  # Angolo 4: Service Line Destra
     ])
 
     # --- FASE D: CALCOLO FINALE OMOGRAFIA ---
+    # Calcola la Matrice H che mappa i 4 angoli pixel (immagine) ai 4 angoli metrici (mondo reale).
     
     # Prende i 4 punti corrispondenti dal mondo reale in config.py
-    # L'ordine DEVE corrispondere all'ordine dei punti pixel calcolati sopra.
+    # L'ordine DEVE corrispondere all'ordine dei punti pixel calcolati nella FASE C.
     points_world_sample = np.float32([
         config.POINTS_WORLD_METERS[0], # 1. Angolo in basso a sinistra (0.0, 0.0)
         config.POINTS_WORLD_METERS[1], # 2. Angolo in basso a destra (Xmax, 0.0)
@@ -154,12 +171,12 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         config.POINTS_WORLD_METERS[3]  # 4. Lato destro linea servizio (Xmax, Yservice)
     ])
     
-    # Usa cv.RANSAC per tollerare errori nei punti pixel
+    # Usa cv.RANSAC per trovare la migliore Omografia, tollerando errori (5.0 pixel)
     H, mask = cv.findHomography(points_image_pixel, points_world_sample, cv.RANSAC, 5.0)
-
-    if H is not None:
-        print(f"\nMatrice di Omografia H calcolata con successo.")
     
+    if H is not None:
+        print(f"\nMatrice di Omografia H calcolata con successo per {surface_type}.")
+        
     return H
 
 # ==============================================================================
