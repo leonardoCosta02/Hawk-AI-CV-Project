@@ -52,15 +52,15 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print(f"Errore: Output del Membro 1 insufficiente ({all_line_segments.size // 4} segmenti trovati).")
         return None
         
-     """
-     📐 1. Obiettivo della Fase A: Classificazione GeometricaL'obiettivo di questa fase è prendere l'array di tutti i segmenti trovati da M1
-     ($\texttt{all\_line\_segments}$) e dividerli in due gruppi distinti basati sull'angolo:
-     Segmenti Orizzontali (Baselines, Service lines): Le linee che attraversano il campo.
-     Segmenti Verticali (Sidelines, Center lines): Le linee che corrono per la lunghezza del campo.
-     Questo è necessario perché, per trovare l'angolo del campo (ad esempio, l'angolo in basso a sinistra), devi intersecare una linea del gruppo Orizzontale (la linea di fondo) con una linea del gruppo Verticale (la linea laterale)
-     
-     
-     """
+         """
+         📐 1. Obiettivo della Fase A: Classificazione GeometricaL'obiettivo di questa fase è prendere l'array di tutti i segmenti trovati da M1
+         ($\texttt{all\_line\_segments}$) e dividerli in due gruppi distinti basati sull'angolo:
+         Segmenti Orizzontali (Baselines, Service lines): Le linee che attraversano il campo.
+         Segmenti Verticali (Sidelines, Center lines): Le linee che corrono per la lunghezza del campo.
+         Questo è necessario perché, per trovare l'angolo del campo (ad esempio, l'angolo in basso a sinistra), devi intersecare una linea del gruppo Orizzontale (la linea di fondo) con una linea del gruppo Verticale (la linea laterale)
+         
+         
+         """
     # --- FASE A: SELEZIONE EURISTICA DEI SEGMENTI CHIAVE ---
     
     
