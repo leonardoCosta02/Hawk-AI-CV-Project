@@ -52,18 +52,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     #  Filtri su angolo (verticali/orizzontali) - ESSENZIALE
     # -----------------------------------------------------
     
-    dx = segments[:, 2] - segments[:, 0]
-    dy = segments[:, 3] - segments[:, 1]
-    angles = np.abs(np.degrees(np.arctan2(dy, dx)) % 180)
-
-    tol = common['ANGLE_TOLERANCE_DEG']
-    valid_angle = (
-        (angles < tol) |                       
-        (angles > 180 - tol) |                 
-        ((angles > 90 - tol) & (angles < 90 + tol)) 
-    )
-
-    segments = segments[valid_angle]
+    
     
     # -----------------------------------------------------
     #  Restituzione
