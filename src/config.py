@@ -2,20 +2,15 @@
 import numpy as np # Necessario per definire la costante matematica 'np.pi'
 
 # --- PARAMETRI DI HOUGH COMUNI (M1) ---
-# Questi parametri sono geometrici e sono spesso validi per tutte le superfici,
-# a meno che le linee non siano molto spezzate.
 HOUGH_COMMON_PARAMS = {
-    'RHO': 1,               # Risoluzione della distanza (Rho): 1 pixel. Non si tocca quasi mai.
-    'THETA': np.pi / 180,   # Risoluzione dell'angolo (Theta): 1 grado (pi/180). Non si tocca mai.
+    'RHO': 1,               # Risoluzione della distanza (Rho): 1 pixel.
+    'THETA': np.pi / 180,   # Risoluzione dell'angolo (Theta): 1 grado.
     'MIN_LENGTH': 60,       # Lunghezza minima (in pixel) che un segmento deve avere per essere rilevato. 
-                            # Alto per ignorare frammenti di rumore.
-    'MAX_GAP': 15,          # Distanza massima (in pixel) tra due segmenti per unirli in un'unica linea. 
-                            # Utile per ricongiungere linee spezzate dalle ombre o dalla terra battuta.
+    'MAX_GAP': 15,          # Distanza massima (in pixel) tra due segmenti per unirli.
     
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
-# Variabile usata nella Cella 2 del notebook per il loop di caricamento delle immagini statiche.
 CAMPI_PATH = {
     "CEMENTO": 'data/static_court/static_court_frame_cemento.png',
     "ERBA": 'data/static_court/static_court_frame_erba.png',
@@ -25,32 +20,32 @@ CAMPI_PATH = {
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
 
 # -----------------
-# CEMENTO: Superficie a bassa rumorosità e contrasto elevato.
+# CEMENTO: Superficie stabile. Soglie bilanciate.
 # -----------------
 PARAMS_CEMENTO = {
-    'CANNY_LOW': 25,         # Soglia Bassa Canny: Bassa per catturare bordi deboli che sono connessi.
-    'CANNY_HIGH': 80,       # Soglia Alta Canny: Bassa/Media, sufficiente per definire le linee bianche come 'bordi certi'.
-    'HOUGH_THRESHOLD': 65,   # Soglia di Votazione Hough: Alta. Richiediamo molti pixel per linea, perché il contrasto è buono.
-    'FRAME_PATH': CAMPI_PATH['CEMENTO'], # Percorso specifico del frame.
+    'CANNY_LOW': 25,        
+    'CANNY_HIGH': 80,       
+    'HOUGH_THRESHOLD': 65,   # Mantenuta media, il contrasto è buono.
+    'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
 # -----------------
-# ERBA: Superficie ad alta rumorosità/texture (fili d'erba) e contrasto variabile.
+# ERBA: Alta rumorosità da texture. Soglia Hough alzata.
 # -----------------
 PARAMS_ERBA = {
-    'CANNY_LOW': 30,         # Soglia Bassa: Leggermente più alta del cemento, per ignorare la granulosità di base.
-    'CANNY_HIGH': 220,       # Soglia Alta: Più alta (120) per ignorare l'intera texture dell'erba e accettare solo le linee bianche.
-    'HOUGH_THRESHOLD': 75,   # Soglia di Votazione Hough: Media/Alta. Simile al cemento, richiede linee ben definite.
+    'CANNY_LOW': 30,
+    'CANNY_HIGH': 220,      
+    'HOUGH_THRESHOLD': 90,   # AUMENTATO (Da 75 a 90): Rende Hough più selettiva per eliminare il rumore di sfondo.
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
 # -----------------
-# TERRA BATTUTA: Superficie con la più alta rumorosità/texture e probabilità di linee spezzate.
+# TERRA BATTUTA: Rumorosità massima e linee spezzate. Soglia Hough molto alta.
 # -----------------
 PARAMS_TERRA_BATTUTA = {
-    'CANNY_LOW': 40,         # Soglia Bassa: La più alta (40) per filtrare il rumore evidente della terra battuta.
-    'CANNY_HIGH': 240,       # Soglia Alta: Molto alta (180). Solo i salti di intensità fortissimi (le linee bianche) sono considerati 'certi'.
-    'HOUGH_THRESHOLD': 60,   # Soglia di Votazione Hough: Bassa. Necessaria perché le linee sono spezzate/usurate; un segmento reale non ha molti pixel continui che votano.
+    'CANNY_LOW': 40,
+    'CANNY_HIGH': 240,      
+    'HOUGH_THRESHOLD': 95,   # AUMENTATO (Da 60 a 95): Rende Hough molto selettiva per eliminare la texture e il rumore della terra battuta.
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
@@ -62,8 +57,7 @@ ALL_SURFACE_PARAMS = {
 } # Dizionario centrale usato nel loop (Cella 3) per recuperare l'intero set di parametri per una data superficie.
 
 
-# Aggiungi questa nuova sezione in config.py
-# (Dimensioni standard del campo da tennis in metri)
+# --- DIMENSIONI METRICHE PER L'OMOGRAFIA (M3) ---
 
 COURT_DIMENSIONS_METERS = {
     'SINGOLO_LARGHEZZA': 8.23,  # Larghezza campo singolo (27 ft)
@@ -73,41 +67,42 @@ COURT_DIMENSIONS_METERS = {
     'BASE_SERVIZIO': 5.49,     # Distanza Linea Servizio a Linea di Fondo (18 ft)
 }
 
-# Definiamo 8 Punti di Riferimento (Corners of the court + T-junctions)
-# USIAMO IL CAMPO SINGOLO (8.23 x 23.77m)
-# Assumiamo l'origine (0, 0) nell'angolo in basso a sinistra della linea di fondo.
+# Definiamo 12 Punti di Riferimento (Punti di Ancoraggio per l'Omografia, Campo Singolo)
+# L'origine (0, 0) è nell'angolo in basso a sinistra della linea di fondo.
 POINTS_WORLD_METERS = np.float32([
     # X (Larghezza)        Y (Lunghezza)
     # -----------------------------------------------------------------------
-    # 1. ANGOLI LINEA DI FONDO 
+    # 1. ANGOLI LINEA DI FONDO VICINA (Y = 0.0m)
     # -----------------------------------------------------------------------
-    [0.0, 0.0],                          # 1. Angolo in basso a sinistra della Linea di Fondo. (Origine)
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # 2. Angolo in basso a destra della Linea di Fondo (8.23m).
+    [0.0, 0.0],                          # 1. Angolo in basso a sinistra (Origine)
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # 2. Angolo in basso a destra
     
     # -----------------------------------------------------------------------
-    # 3. INTERSEZIONI LINEA DI SERVIZIO
+    # 3. INTERSEZIONI LINEA DI SERVIZIO VICINA (Y = 6.40m)
     # -----------------------------------------------------------------------
-    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 3. Intersezione sinistra tra Linea Laterale Singola e Linea di Servizio (0.0m, 6.40m).
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 4. Intersezione destra tra Linea Laterale Singola e Linea di Servizio (8.23m, 6.40m).
+    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 3. Lato sinistro linea servizio vicina
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 4. Lato destro linea servizio vicina
     
     # -----------------------------------------------------------------------
-    # 5. PUNTI SULLA RETE
+    # 5. PUNTI SULLA RETE (Y = 11.885m)
     # -----------------------------------------------------------------------
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 5. Punto sulla Linea Laterale Sinistra, all'altezza esatta della Rete.
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 6. Punto sulla Linea Laterale Destra, all'altezza esatta della Rete.
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 5. Lato sinistro della Rete
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2], # 6. Lato destro della Rete
     
     # -----------------------------------------------------------------------
     # 7. CENTRI DELLE LINEE DI SERVIZIO (T-JUNCTIONS)
     # -----------------------------------------------------------------------
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Giunzione T sulla Linea di Servizio più vicina (centro a 4.115m).
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Giunzione T sulla Linea di Servizio più lontana.
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 7. Giunzione T sulla Linea di Servizio più vicina
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 8. Giunzione T sulla Linea di Servizio più lontana
+    
     # -----------------------------------------------------------------------
     # 9. ANGOLI LINEA DI FONDO AVVERSARIO (LONTANA)
     # -----------------------------------------------------------------------
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 9. Angolo in alto a sinistra della Linea di Fondo Lontana (0.0m, 23.77m).
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 10. Angolo in alto a destra della Linea di Fondo Lontana (8.23m, 23.77m).
+    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 9. Angolo in alto a sinistra della Linea di Fondo Lontana
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']], # 10. Angolo in alto a destra della Linea di Fondo Lontana
+    
     # -----------------------------------------------------------------------
-    # 11. *NUOVE* INTERSEZIONI LINEA DI SERVIZIO LONTANA (Y = 17.37m)
+    # 11. INTERSEZIONI LINEA DI SERVIZIO LONTANA (Y = 17.37m)
     # -----------------------------------------------------------------------
     [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 11. Intersezione sinistra tra Linea Laterale e Linea di Servizio lontana
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # 12. Intersezione destra tra Linea Laterale e Linea di Servizio lontana
