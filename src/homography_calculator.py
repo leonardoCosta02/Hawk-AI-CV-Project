@@ -78,7 +78,7 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
         return None, None
 
-     # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
+    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI (EURISTICA ROBUSTA) ---
     
     # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame, Y max)
     h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2 
@@ -105,12 +105,15 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     
     if len(h_segments_filtered) > 0:
         # Troviamo l'indice del MAX Y rimanente (che è la seconda linea più in basso)
-        # Questo garantisce che la Service Line vicina venga scelta, ignorando il campo lontano.
         second_closest_line_index = np.argmax(h_y_coords_filtered) 
         service_line = h_segments_filtered[second_closest_line_index]
     else:
         print("Errore: Non sono state trovate almeno due linee orizzontali chiave.")
         return None, None
+
+    # ** CORREZIONE: DEFINIZIONE DI selected_segments (RISOLVE IL NAMETERROR) **
+    # Raccoglie i quattro segmenti chiave per la visualizzazione
+    selected_segments = np.array([base_line, left_line, right_line, service_line], dtype=np.int32)
 
 
     # --- FASE C: CALCOLO DELLE 4 INTERSEZIONI (PUNTI PIXEL) ---
@@ -164,7 +167,6 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
 
 # ==============================================================================
 # 3. FUNZIONE DI MAPPATURA (Utilità)
-# ... [QUESTA FUNZIONE RIMANE INVARIATA]
 # ==============================================================================
 def map_pixel_to_world(H: np.ndarray, pixel_coords: tuple) -> np.ndarray:
     """
@@ -180,11 +182,9 @@ def map_pixel_to_world(H: np.ndarray, pixel_coords: tuple) -> np.ndarray:
     pixel_homogeneous = np.array([u, v, 1], dtype=np.float32)
     
     # 2. Moltiplica H per il vettore di coordinate pixel (H * p)
-    # Questo è il cuore della trasformazione proiettiva (P' = H * p)
     world_homogeneous = H @ pixel_homogeneous
     
     # 3. Normalizza (divisione per la terza coordinata 'w')
-    # Si torna dalle coordinate omogenee 3D (wX, wY, w) a quelle euclidee 2D (X, Y)
     X = world_homogeneous[0] / world_homogeneous[2]
     Y = world_homogeneous[1] / world_homogeneous[2]
     
