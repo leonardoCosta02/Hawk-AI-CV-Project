@@ -73,7 +73,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     # Filtri su angolo (RIATTIVATO per eliminare il rumore di sfondo)
     # Non possiamo eliminarlo, altrimenti il Modulo M3 non funzionerà!
     # -----------------------------------------------------
-    
+    """
     dx = segments[:, 2] - segments[:, 0]
     dy = segments[:, 3] - segments[:, 1]
     angles = np.abs(np.degrees(np.arctan2(dy, dx)) % 180)
@@ -85,7 +85,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         ((angles > 90 - tol) & (angles < 90 + tol)) 
     )
     segments = segments[valid_angle]
-    
+    """
     # -----------------------------------------------------
     # Restituzione
     # -----------------------------------------------------
