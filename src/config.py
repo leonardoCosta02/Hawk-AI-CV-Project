@@ -17,9 +17,9 @@ HOUGH_COMMON_PARAMS = {
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
 # Variabile usata nella Cella 2 del notebook per il loop di caricamento delle immagini statiche.
 CAMPI_PATH = {
-    "CEMENTO": 'data/static_images/static_court_frame_cemento.jpg',
-    "ERBA": 'data/static_images/static_court_frame_erba.jpg',
-    "TERRA_BATTUTA": 'data/static_images/static_court_frame_clay.jpg',
+    "CEMENTO": 'data/static_court/static_court_frame_cemento.png',
+    "ERBA": 'data/static_court/static_court_frame_erba.png',
+    "TERRA_BATTUTA": 'data/static_court/static_court_frame_clay.png',
 }
 
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
