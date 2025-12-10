@@ -37,56 +37,9 @@ def extract_white_pixels(image_bgr):
 
 
 # ---------------------------------------------------------
-# 3) Merge dei segmenti collineari
+# 3) merge_collinear_segments - RIMOSSA
 # ---------------------------------------------------------
-def merge_collinear_segments(segments, angle_tol=5, dist_thresh=20):
-    if len(segments) == 0:
-        return segments
-
-    merged = []
-    used = np.zeros(len(segments), dtype=bool)
-
-    def seg_angle(seg):
-        x1, y1, x2, y2 = seg
-        ang = np.degrees(np.arctan2(y2 - y1, x2 - x1)) % 180
-        return ang
-
-    def seg_dist(a, b):
-        ax = (a[0] + a[2]) / 2
-        ay = (a[1] + a[3]) / 2
-        bx = (b[0] + b[2]) / 2
-        by = (b[1] + b[3]) / 2
-        return np.sqrt((ax - bx) ** 2 + (ay - by) ** 2)
-
-    for i in range(len(segments)):
-        if used[i]:
-            continue
-
-        group = [segments[i]]
-        used[i] = True
-
-        ai = seg_angle(segments[i])
-
-        for j in range(i + 1, len(segments)):
-            if used[j]:
-                continue
-            aj = seg_angle(segments[j])
-
-            if abs(ai - aj) < angle_tol or abs(abs(ai - aj) - 180) < angle_tol:
-                if seg_dist(segments[i], segments[j]) < dist_thresh:
-                    used[j] = True
-                    group.append(segments[j])
-
-        xs, ys, xe, ye = [], [], [], []
-        for (x1, y1, x2, y2) in group:
-            xs += [x1, x2]
-            ys += [y1, y2]
-            xe = xs
-            ye = ys
-
-        merged.append([min(xs), min(ys), max(xs), max(ys)])
-
-    return np.array(merged, dtype=np.int32)
+# NOTA: La funzione merge_collinear_segments è stata rimossa.
 
 
 # ---------------------------------------------------------
@@ -100,15 +53,18 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     common = config.HOUGH_COMMON_PARAMS
 
     # --- Preprocessing ---
-    gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
-    blurred = cv.GaussianBlur(gray, (5, 5), 1.0)
+    # Sfoca l'immagine BGR prima di usare la White Mask per ridurre il rumore
+    blurred_bgr = cv.GaussianBlur(image_data, (5, 5), 1.0)
+    
+    gray = cv.cvtColor(blurred_bgr, cv.COLOR_BGR2GRAY) 
+    blurred_gray = cv.GaussianBlur(gray, (5, 5), 1.0) 
 
     # --- ROI ---
     roi_mask = build_roi_mask(gray)
-    masked_gray = cv.bitwise_and(gray, gray, mask=roi_mask)
+    masked_gray = cv.bitwise_and(blurred_gray, blurred_gray, mask=roi_mask)
 
     # --- White mask ---
-    white_mask = extract_white_pixels(image_data)
+    white_mask = extract_white_pixels(blurred_bgr) # Usa l'immagine BGR sfocata
     masked_gray = cv.bitwise_and(masked_gray, masked_gray, mask=white_mask)
 
     # --- Canny ---
@@ -119,8 +75,8 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         edges,
         rho=common['RHO'],
         theta=common['THETA'],
-        threshold=params['HOUGH_THRESHOLD'],
-        minLineLength=common['MIN_LENGTH'],
+        threshold=params['HOUGH_THRESHOLD'], 
+        minLineLength=common['MIN_LENGTH'], 
         maxLineGap=common['MAX_GAP']
     )
 
@@ -138,16 +94,14 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
     tol = common['ANGLE_TOLERANCE_DEG']
     valid_angle = (
-        (angles < tol) |                      # orizzontali
-        (angles > 180 - tol) |                # orizzontali 180°
-        ((angles > 90 - tol) & (angles < 90 + tol))  # verticali
+        (angles < tol) |                       
+        (angles > 180 - tol) |                 
+        ((angles > 90 - tol) & (angles < 90 + tol)) 
     )
 
     segments = segments[valid_angle]
 
     # -----------------------------------------------------
-    #  Merge finale
+    #  Restituzione
     # -----------------------------------------------------
-    merged = merge_collinear_segments(segments)
-
-    return merged
+    return segments # Restituisce i segmenti filtrati (NON uniti)
