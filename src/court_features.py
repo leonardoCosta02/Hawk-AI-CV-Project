@@ -53,7 +53,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     common = config.HOUGH_COMMON_PARAMS
 
     # --- Preprocessing ---
-    # Sfoca l'immagine BGR prima di usare la White Mask per ridurre il rumore
+    # OTTIMIZZAZIONE: Sfoca l'immagine BGR prima di usare la White Mask per ridurre il rumore
     blurred_bgr = cv.GaussianBlur(image_data, (5, 5), 1.0)
     
     gray = cv.cvtColor(blurred_bgr, cv.COLOR_BGR2GRAY) 
@@ -104,4 +104,4 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     # -----------------------------------------------------
     #  Restituzione
     # -----------------------------------------------------
-    return segments # Restituisce i segmenti filtrati (NON uniti)
+    return segments # Restituisce i segmenti filtrati
