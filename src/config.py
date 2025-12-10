@@ -3,17 +3,11 @@ import numpy as np # Necessario per definire la costante matematica 'np.pi'
 
 # --- PARAMETRI DI HOUGH COMUNI (M1) ---
 HOUGH_COMMON_PARAMS = {
-    'RHO': 1,
-    'THETA': np.pi / 180,
-    'MIN_LENGTH': 60,
-    'MAX_GAP': 15,
-    
-    # --- NUOVI PARAMETRI ROI (Percentuali dello schermo) ---
-    # Questi filtrano segmenti fuori dal campo (spalti, pubblicità, ecc.)
-    'ROI_LEFT_PCT': 0.05,    # Esclude il 5% più a sinistra
-    'ROI_RIGHT_PCT': 0.95,   # Esclude il 5% più a destra
-    'ROI_TOP_PCT': 0.15,     # Esclude il 15% in alto (spalti lontani)
-    'ANGLE_TOLERANCE_DEG': 10, # Usato in court_features per il filtro angolare
+    'RHO': 1,               
+    'THETA': np.pi / 180,   
+    'MIN_LENGTH': 60,       
+    'MAX_GAP': 15,          
+    'ANGLE_TOLERANCE_DEG': 10, # Tolleranza angolare per il filtro in Omografia (FASE A)
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
@@ -23,38 +17,35 @@ CAMPI_PATH = {
     "TERRA_BATTUTA": 'data/static_court/static_court_frame_clay.png',
 }
 
-# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE (AMMORBIDITI) ---
+# --- PARAMETRI DI CROPPING FISSI (M1) (Forniti dall'utente) ---
+# Queste coordinate (x_start, y_start, x_end, y_end) isolano il campo da tennis
+CROPPING_PARAMS = {
+    'CEMENTO': [100, 200, 1100, 800],    # Ritaglio per CEMENTO
+    'ERBA': [50, 150, 1200, 900],        # Ritaglio per ERBA
+    'TERRA_BATTUTA': [200, 100, 1000, 750], # Ritaglio per TERRA_BATTUTA
+}
 
-# -----------------
-# Nel tuo file config.py, aggiorna questa sezione:
 
-# -----------------
-# CEMENTO: Soglie ulteriormente abbassate.
-# -----------------
+# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
+
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 70,       # DA 80 A 70: Molto più facile rilevare i bordi.
-    'HOUGH_THRESHOLD': 40,   # DA 50 A 40: Molto facile rilevare una linea.
+    'CANNY_HIGH': 70,       
+    'HOUGH_THRESHOLD': 40,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
-# -----------------
-# ERBA: Soglie ulteriormente ammorbidite.
-# -----------------
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 100,      # DA 120 A 100: Più facile che un bordo sia considerato 'certo'.
-    'HOUGH_THRESHOLD': 50,   # DA 60 A 50: Più facile rilevare.
+    'CANNY_HIGH': 100,      
+    'HOUGH_THRESHOLD': 50,   
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
-# -----------------
-# TERRA BATTUTA: Soglie al limite per catturare linee spezzate.
-# -----------------
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 120,      # DA 150 A 120: Molto permissivo per i bordi.
-    'HOUGH_THRESHOLD': 40,   # DA 50 A 40: Massima facilità per le linee spezzate.
+    'CANNY_HIGH': 120,      
+    'HOUGH_THRESHOLD': 40,   
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
@@ -76,19 +67,11 @@ COURT_DIMENSIONS_METERS = {
     'BASE_SERVIZIO': 5.49,
 }
 
-# 12 Punti di Riferimento in Metri (World Coordinates)
+# Punti di Riferimento in Metri (World Coordinates) per l'area di servizio vicina
 POINTS_WORLD_METERS = np.float32([
-    # ... [LA TUA LISTA DI 12 PUNTI È IMMUTATA E CORRETTA QUI] ...
     [0.0, 0.0],
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0],
     [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2],
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']/2],
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA']/2, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']],
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE']],
-    [0.0, COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['LUNGHEZZA_TOTALE'] - COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
+    # ... altri punti non usati direttamente in questa omografia
 ])
