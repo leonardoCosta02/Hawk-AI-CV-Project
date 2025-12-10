@@ -5,7 +5,7 @@ from src import config
 
 
 # ---------------------------------------------------------
-# 1) ROI MASK basata sulla proiezione verticale dei bordi
+# 1) ROI MASK (Invariata)
 # ---------------------------------------------------------
 def build_roi_mask(gray):
     h, w = gray.shape
@@ -26,7 +26,7 @@ def build_roi_mask(gray):
 
 
 # ---------------------------------------------------------
-# 2) Filtro colore bianco
+# 2) Filtro colore bianco (Invariato)
 # ---------------------------------------------------------
 def extract_white_pixels(image_bgr):
     hsv = cv.cvtColor(image_bgr, cv.COLOR_BGR2HSV)
@@ -37,7 +37,7 @@ def extract_white_pixels(image_bgr):
 
 
 # ---------------------------------------------------------
-# 3) merge_collinear_segments - RIMOSSA
+# 3) merge_collinear_segments - RIMOSSA (Correzione Geometria)
 # ---------------------------------------------------------
 # NOTA: La funzione merge_collinear_segments è stata rimossa.
 
@@ -53,26 +53,35 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     common = config.HOUGH_COMMON_PARAMS
 
     # --- Preprocessing ---
-    # OTTIMIZZAZIONE: Sfoca l'immagine BGR prima di usare la White Mask per ridurre il rumore
+    # Sfoca l'immagine BGR prima di usare la White Mask
     blurred_bgr = cv.GaussianBlur(image_data, (5, 5), 1.0)
-    
     gray = cv.cvtColor(blurred_bgr, cv.COLOR_BGR2GRAY) 
     blurred_gray = cv.GaussianBlur(gray, (5, 5), 1.0) 
 
-    # --- ROI ---
+    # ------------------------------------------------
+    # 1. RILEVAMENTO BORDI (CANNY) su IMMAGINE IN SCALA DI GRIGI INTERA
+    # Questo è il punto chiave: Canny vede tutti i bordi prima del filtraggio
+    edges = cv.Canny(blurred_gray, params['CANNY_LOW'], params['CANNY_HIGH'])
+    # ------------------------------------------------
+
+    # --- 2. CREAZIONE MASCHERA DI FILTRAGGIO ---
+    
+    # Maschera ROI (geometrica)
     roi_mask = build_roi_mask(gray)
-    masked_gray = cv.bitwise_and(blurred_gray, blurred_gray, mask=roi_mask)
+    
+    # Maschera Colore (bianco)
+    white_mask = extract_white_pixels(blurred_bgr) 
 
-    # --- White mask ---
-    white_mask = extract_white_pixels(blurred_bgr) # Usa l'immagine BGR sfocata
-    masked_gray = cv.bitwise_and(masked_gray, masked_gray, mask=white_mask)
-
-    # --- Canny ---
-    edges = cv.Canny(masked_gray, params['CANNY_LOW'], params['CANNY_HIGH'])
+    # OTTIMIZZAZIONE: Combina le due maschere (solo AND)
+    combined_mask = cv.bitwise_and(roi_mask, white_mask) 
+    
+    # --- 3. APPLICAZIONE FILTRI/MASCHERE all'output di Canny ---
+    # Applica la maschera all'output di Canny (Filtra i bordi non bianchi e fuori ROI)
+    masked_edges = cv.bitwise_and(edges, edges, mask=combined_mask)
 
     # --- Hough Probabilistico ---
     linesP = cv.HoughLinesP(
-        edges,
+        masked_edges, # USA l'output di Canny filtrato (masked_edges)
         rho=common['RHO'],
         theta=common['THETA'],
         threshold=params['HOUGH_THRESHOLD'], 
@@ -104,4 +113,4 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     # -----------------------------------------------------
     #  Restituzione
     # -----------------------------------------------------
-    return segments # Restituisce i segmenti filtrati
+    return segments
