@@ -7,7 +7,7 @@ HOUGH_COMMON_PARAMS = {
     'THETA': np.pi / 180,   
     'MIN_LENGTH': 60,       # OTTIMIZZATO: Aumentato da 60 a 80 per ridurre il rumore.
     'MAX_GAP': 15,          
-    'ANGLE_TOLERANCE_DEG': 10,
+    'ANGLE_TOLERANCE_DEG': 15,
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
