@@ -63,21 +63,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         if lines.size == 0:
             return np.array([])
 
-        # --- FASE 2: Filtro di Lunghezza---
-      
-
-        # 2.2 Maschera di Lunghezza
-        MIN_LENGTH_FILTER = common_hough.get('MIN_LENGTH', 60)
-        MAX_LENGTH_FILTER = w * 0.7 # 70% della larghezza immagine
-        is_valid_length = (lengths >= MIN_LENGTH_FILTER) & (lengths <= MAX_LENGTH_FILTER)
-
         
-
-        # --- FASE 3: Applica la maschera finale ---
-        # Un segmento deve superare i test di lunghezza, angolo e ROI.
-        final_mask = is_valid_length 
-        filtered_lines = lines[final_mask]
-        
-        return filtered_lines
+        return lines
     else:
         return np.array([])
