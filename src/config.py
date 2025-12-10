@@ -6,7 +6,7 @@ HOUGH_COMMON_PARAMS = {
     'RHO': 1,               
     'THETA': np.pi / 180,   
     'MIN_LENGTH': 60,       # OTTIMIZZATO: Aumentato da 60 a 80 per ridurre il rumore.
-    'MAX_GAP': 15,          
+    'MAX_GAP': 35,          
     'ANGLE_TOLERANCE_DEG': 180,
 }
 
@@ -24,7 +24,7 @@ CAMPI_PATH = {
 PARAMS_CEMENTO = {
     'CANNY_LOW': 15,        
     'CANNY_HIGH': 120,      
-    'HOUGH_THRESHOLD': 20,   
+    'HOUGH_THRESHOLD': 60,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
@@ -40,7 +40,7 @@ PARAMS_ERBA = {
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
     'CANNY_HIGH': 150,      
-    'HOUGH_THRESHOLD': 45,   
+    'HOUGH_THRESHOLD': 60,   
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
