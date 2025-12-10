@@ -30,7 +30,7 @@ PARAMS_CEMENTO = {
 
 # ERBA (Target: linee deboli, mantenute basse)
 PARAMS_ERBA = {
-    'CANNY_LOW': 30,
+    'CANNY_LOW': 15,
     'CANNY_HIGH': 100,       
     'HOUGH_THRESHOLD': 30,   
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
