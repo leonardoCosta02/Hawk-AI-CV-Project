@@ -20,9 +20,9 @@ CAMPI_PATH = {
 # --- PARAMETRI DI CROPPING FISSI (M1) (Forniti dall'utente) ---
 # Queste coordinate (x_start, y_start, x_end, y_end) isolano il campo da tennis
 CROPPING_PARAMS = {
-    'CEMENTO': [100, 200, 1100, 800],    # Ritaglio per CEMENTO
-    'ERBA': [50, 150, 1200, 900],        # Ritaglio per ERBA
-    'TERRA_BATTUTA': [200, 100, 1000, 750], # Ritaglio per TERRA_BATTUTA
+    'CEMENTO': [100, 200, 900, 1100],    # Ritaglio per CEMENTO
+    'ERBA': [70, 150, 1100, 900],        # Ritaglio per ERBA
+    'TERRA_BATTUTA': [150, 100, 900, 550], # Ritaglio per TERRA_BATTUTA
 }
 
 
