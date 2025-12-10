@@ -2,7 +2,11 @@
 import cv2 as cv
 import numpy as np
 import math
-from . import config # Importa i punti fissi in metri
+from . import config 
+
+# Definizioni ANSI per l'output in rosso nel terminale/notebook
+RED = "\033[91m"
+ENDC = "\033[0m"
 
 # ==============================================================================
 # 1. FUNZIONE PER TROVARE L'INTERSEZIONE TRA DUE LINEE
@@ -10,13 +14,16 @@ from . import config # Importa i punti fissi in metri
 def find_intersection(segment1: np.ndarray, segment2: np.ndarray) -> tuple:
     """
     Trova il punto di intersezione tra due segmenti di linea in forma di retta.
+    AGGIUNTA DI ROBUSTEZZA: Controllo per linee quasi parallele (D ~ 0).
     """
     x1, y1, x2, y2 = segment1
     x3, y3, x4, y4 = segment2
 
     D = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    
+    epsilon = 1e-4 
 
-    if D == 0:
+    if abs(D) < epsilon: # Linee parallele o quasi parallele
         return None, None
 
     t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / D
@@ -32,96 +39,114 @@ def find_intersection(segment1: np.ndarray, segment2: np.ndarray) -> tuple:
 def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEMENTO') -> tuple:
     
     if all_line_segments.size < 4: 
-        print(f"Errore: Output del Membro 1 insufficiente ({all_line_segments.size // 4} segmenti trovati).")
+        print(f"Errore: Output del Modulo M1 insufficiente per calcolare l'omografia ({all_line_segments.size} segmenti trovati).")
         return None, None
-        
-    # --- FASE A: SELEZIONE EURISTICA DEI SEGMENTI CHIAVE (Angolo) ---
     
-    angles_rad = np.arctan2(all_line_segments[:, 3] - all_line_segments[:, 1], 
-                            all_line_segments[:, 2] - all_line_segments[:, 0])
-    angles_deg = np.abs(np.degrees(angles_rad) % 180)
-
-    ANGLE_TOLERANCE = config.HOUGH_COMMON_PARAMS.get('ANGLE_TOLERANCE_DEG', 5)
+    # --- FASE A: Filtraggio Linee e Raggruppamento ---
     
-    is_horizontal = (angles_deg < ANGLE_TOLERANCE) | (angles_deg > 180 - ANGLE_TOLERANCE)
-    is_vertical = (angles_deg > 90 - ANGLE_TOLERANCE) & (angles_deg < 90 + ANGLE_TOLERANCE)
+    dx = all_line_segments[:, 2] - all_line_segments[:, 0]
+    dy = all_line_segments[:, 3] - all_line_segments[:, 1]
+    angles = np.degrees(np.arctan2(dy, dx)) % 180
 
+    tol = config.HOUGH_COMMON_PARAMS['ANGLE_TOLERANCE_DEG']
+    
+    # Segmenti Orizzontali
+    is_horizontal = (angles < tol) | (angles > 180 - tol)
     horizontal_segments = all_line_segments[is_horizontal]
+    
+    # Segmenti Verticali
+    is_vertical = (angles > 90 - tol) & (angles < 90 + tol)
     vertical_segments = all_line_segments[is_vertical]
 
     if len(horizontal_segments) < 2 or len(vertical_segments) < 2:
-        print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
+        print(f"{RED}Errore: Trovate solo {len(horizontal_segments)} linee orizzontali e {len(vertical_segments)} linee verticali. Servono almeno 2 H e 2 V.{ENDC}")
         return None, None
 
-    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI (POSIZIONE) ---
+    # --- FASE B: Selezione Linee Chiave (Euristica basata su Centroidi Y) ---
+    # Logica per identificare il rettangolo di servizio (Base Line e Service Line)
     
-    # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame, Y max)
-    h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2 
-    base_line_index = np.argmax(h_y_coords) 
-    base_line = horizontal_segments[base_line_index] 
-    
-    # 2. Linea Verticale Sinistra (Left Line: la più a sinistra nel frame, X min)
-    v_x_coords = (vertical_segments[:, 0] + vertical_segments[:, 2]) / 2 
-    left_line_index = np.argmin(v_x_coords) 
-    left_line = vertical_segments[left_line_index] 
-    
-    # 3. Linea Verticale Destra (Right Line: la più a destra nel frame, X max)
-    right_line_index = np.argmax(v_x_coords) 
-    right_line = vertical_segments[right_line_index] 
-    
-    # 4. Linea Orizzontale di Servizio (Service Line: la seconda più in basso)
-    
-    temp_mask = np.ones(len(horizontal_segments), dtype=bool)
-    temp_mask[base_line_index] = False
-    
-    h_y_coords_filtered = h_y_coords[temp_mask]
-    h_segments_filtered = horizontal_segments[temp_mask]
-    
-    if len(h_segments_filtered) > 0:
-        # Trova il MAX Y rimanente (la seconda linea più in basso)
-        second_closest_line_index = np.argmax(h_y_coords_filtered) 
-        service_line = h_segments_filtered[second_closest_line_index]
-    else:
-        print("Errore: Non sono state trovate almeno due linee orizzontali chiave.")
+    try:
+        # Ordina orizzontali per coordinata Y media decrescente (dal basso verso l'alto nell'immagine)
+        h_y_center = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2
+        h_sorted_indices = np.argsort(h_y_center)[::-1]
+        
+        # Linea Base (la più in basso)
+        base_line = horizontal_segments[h_sorted_indices[0]] 
+        
+        # Linea Servizio (la seconda in basso)
+        service_line = horizontal_segments[h_sorted_indices[1]] 
+        
+        # Ordina verticali per coordinata X media (da sinistra a destra)
+        v_x_center = (vertical_segments[:, 0] + vertical_segments[:, 2]) / 2
+        v_sorted_indices = np.argsort(v_x_center)
+        
+        # Linea Laterale Sinistra (la più a sinistra)
+        side_line_left = vertical_segments[v_sorted_indices[0]]
+        
+        # Linea Laterale Destra (la più a destra)
+        side_line_right = vertical_segments[v_sorted_indices[-1]] 
+        
+        selected_segments = np.array([base_line, service_line, side_line_left, side_line_right])
+        
+    except IndexError:
+        print(f"{RED}Errore: Impossibile trovare le 4 linee chiave (non abbastanza segmenti validi).{ENDC}")
         return None, None
-
-    # ** CORREZIONE: DEFINIZIONE DI selected_segments (RISOLVE IL NAMETERROR) **
-    selected_segments = np.array([base_line, left_line, right_line, service_line], dtype=np.int32)
-
-
-    # --- FASE C: CALCOLO DELLE 4 INTERSEZIONI (PUNTI PIXEL) ---
+        
+    # --- STAMPA DELLE LINEE RILEVATE (ROSSO) ---
+    print(f"{RED}--- LINEE CHIAVE RILEVATE (M3 - TEMPLATE FITTING CANDIDATO) ---{ENDC}")
+    print(f"{RED}Base Line (H): {base_line}{ENDC}")
+    print(f"{RED}Service Line (H): {service_line}{ENDC}")
+    print(f"{RED}Side Line Left (V): {side_line_left}{ENDC}")
+    print(f"{RED}Side Line Right (V): {side_line_right}{ENDC}")
     
-    p1x, p1y = find_intersection(base_line, left_line)
-    p2x, p2y = find_intersection(base_line, right_line)
-    p3x, p3y = find_intersection(service_line, left_line)
-    p4x, p4y = find_intersection(service_line, right_line)
+
+    # --- FASE C: Calcolo delle intersezioni (4 Punti Pixel) ---
+    
+    # I punti pixel devono corrispondere all'ordine dei POINTS_WORLD_METERS:
+    # [0.0, 0.0], [LARGHEZZA, 0.0], [0.0, SERVIZIO_RETE], [LARGHEZZA, SERVIZIO_RETE]
+    
+    # 1. P1: (0.0, 0.0) -> Intersezione Base Line (y=0.0) e Sinistra (x=0.0)
+    p1x, p1y = find_intersection(base_line, side_line_left)
+    
+    # 2. P2: (LARGHEZZA, 0.0) -> Intersezione Base Line e Destra 
+    p2x, p2y = find_intersection(base_line, side_line_right)
+
+    # 3. P3: (0.0, SERVIZIO_RETE) -> Intersezione Service Line e Sinistra
+    p3x, p3y = find_intersection(service_line, side_line_left)
+
+    # 4. P4: (LARGHEZZA, SERVIZIO_RETE) -> Intersezione Service Line e Destra
+    p4x, p4y = find_intersection(service_line, side_line_right)
     
     if None in [p1x, p2x, p3x, p4x]:
-        print("Errore: Impossibile trovare tutte le 4 intersezioni chiave.")
+        print(f"{RED}Errore: Impossibile trovare tutte le 4 intersezioni chiave (le linee selezionate sono quasi parallele).{ENDC}")
         return None, None
     
     points_image_pixel = np.float32([
-        [p1x, p1y],  # Angolo 1: Base Line Sinistra
-        [p2x, p2y],  # Angolo 2: Base Line Destra
-        [p3x, p3y],  # Angolo 3: Service Line Sinistra
-        [p4x, p4y],  # Angolo 4: Service Line Destra
+        [p1x, p1y],  
+        [p2x, p2y],  
+        [p3x, p3y],  
+        [p4x, p4y],  
     ])
+    
+    # --- STAMPA PUNTI PIXEL USATI (ROSSO) ---
+    print(f"\n{RED}Punti Pixel usati per Omografia (corrispondenti a POINTS_WORLD_METERS):{ENDC}")
+    print(points_image_pixel)
 
     # --- FASE D: CALCOLO FINALE OMOGRAFIA ---
     
-    points_world_sample = np.float32([
-        config.POINTS_WORLD_METERS[0], 
-        config.POINTS_WORLD_METERS[1], 
-        config.POINTS_WORLD_METERS[2], 
-        config.POINTS_WORLD_METERS[3]  
-    ])
+    points_world_sample = config.POINTS_WORLD_METERS
     
+    # Usa RANSAC per robustezza contro outlier
     H, mask = cv.findHomography(points_image_pixel, points_world_sample, cv.RANSAC, 5.0)
     
     if H is not None:
-        print(f"\nMatrice di Omografia H calcolata con successo per {surface_type}.")
+        # --- STAMPA MATRICE H (ROSSO) ---
+        print(f"\n{RED}✅ Matrice H calcolata con successo per {surface_type}.{ENDC}")
+        print(f"{RED}Matrice H (3x3):{ENDC}")
+        print(H)
         return H, selected_segments
     else:
+        print(f"{RED}❌ Errore: cv.findHomography ha fallito (probabilmente punti pixel mal allineati).{ENDC}")
         return None, None
 
 
@@ -129,16 +154,17 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
 # 3. FUNZIONE DI MAPPATURA (Utilità)
 # ==============================================================================
 def map_pixel_to_world(H: np.ndarray, pixel_coords: tuple) -> np.ndarray:
-    
+    """
+    Mappa un punto pixel (u, v) a coordinate reali (X, Y) usando la Matrice H.
+    """
     if H is None:
-        return None
-        
-    u, v = pixel_coords
+        return np.array([0.0, 0.0])
     
-    pixel_homogeneous = np.array([u, v, 1], dtype=np.float32)
-    world_homogeneous = H @ pixel_homogeneous
+    point_homog = np.array([pixel_coords[0], pixel_coords[1], 1])
+    world_homog = H @ point_homog
     
-    X = world_homogeneous[0] / world_homogeneous[2]
-    Y = world_homogeneous[1] / world_homogeneous[2]
+    # Normalizza
+    X = world_homog[0] / world_homog[2]
+    Y = world_homog[1] / world_homog[2]
     
     return np.array([X, Y])
