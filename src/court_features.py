@@ -1,4 +1,4 @@
-# src/court_features.py - Versione finale pulita
+# src/court_features.py - Versione finale pulita con filtri geometrici
 
 import cv2 as cv
 import numpy as np
@@ -6,8 +6,8 @@ from src import config # Importa il file di configurazione (necessario per i par
 
 def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
     """
-    Esegue il preprocessing e l'estrazione delle linee, usando i parametri
-    ottimali specifici per la superficie definiti in config.py.
+    Esegue il preprocessing, l'estrazione delle linee e l'applicazione di un 
+    filtro di Regione di Interesse (ROI), Lunghezza e Angolo.
 
     Args:
         image_data: Il frame statico del campo da tennis letto da OpenCV.
@@ -19,55 +19,73 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     if image_data is None:
         return np.array([])
     
-    # 1. RECUPERO PARAMETRI (Legge i parametri specifici per la superficie)
-    
-    # Prende i parametri specifici per Canny/Hough
+    # 1. RECUPERO PARAMETRI
     params = config.ALL_SURFACE_PARAMS.get(surface_type.upper(), config.PARAMS_CEMENTO)
-    # Prende i parametri di Hough comuni
     common_hough = config.HOUGH_COMMON_PARAMS
 
     # 2. PREPROCESSING
     gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
     blurred = cv.GaussianBlur(gray, (5, 5), 0)
 
-    # 3. EDGE DETECTION (Canny) - Usa i parametri specifici della superficie
+    # 3. EDGE DETECTION (Canny)
     edges = cv.Canny(blurred, params['CANNY_LOW'], params['CANNY_HIGH'])
     
-    # 4. LINE DETECTION (Probabilistic Hough Transform) - Usa i parametri specifici
-    # Nota: MIN_LENGTH è qui usato per il filtro iniziale di OpenCV
+    # 4. LINE DETECTION (Probabilistic Hough Transform)
     raw_lines = cv.HoughLinesP(
         edges,
         rho=common_hough['RHO'],
         theta=common_hough['THETA'],
-        threshold=params['HOUGH_THRESHOLD'], # Usa la soglia specifica
+        threshold=params['HOUGH_THRESHOLD'],
         minLineLength=common_hough['MIN_LENGTH'],
         maxLineGap=common_hough['MAX_GAP']
     )
 
-    # 5. OUTPUT CON FILTRO DI LUNGHEZZA AVANZATO (Minimo e Massimo)
+    # 5. OUTPUT CON FILTRI GEOMETRICI (ROI + Lunghezza + Angolo)
     if raw_lines is not None:
         lines = raw_lines.reshape(-1, 4)
+        h, w, _ = image_data.shape # Altezza e Larghezza
+
+        # --- FASE A: Filtro di Regione di Interesse (ROI) ---
+        X_MIN = int(w * common_hough['ROI_LEFT_PCT'])
+        X_MAX = int(w * common_hough['ROI_RIGHT_PCT'])
+        Y_MIN = int(h * common_hough['ROI_TOP_PCT'])
         
-        # 5.1 Calcola la lunghezza effettiva di ogni segmento (Teorema di Pitagora)
+        # Un segmento è valido se i suoi estremi rientrano nella ROI.
+        is_x_valid = (lines[:, 0] >= X_MIN) & (lines[:, 0] <= X_MAX) & \
+                     (lines[:, 2] >= X_MIN) & (lines[:, 2] <= X_MAX)
+        
+        # Filtro verticale: esclude spalti (Y_MIN)
+        is_y_valid = (lines[:, 1] >= Y_MIN) & (lines[:, 3] >= Y_MIN)
+
+        roi_mask = is_x_valid & is_y_valid
+        lines = lines[roi_mask]
+        
+        if lines.size == 0:
+            return np.array([])
+
+        # --- FASE B: Filtro di Lunghezza e Angolo ---
+        
+        # 1. Calcola Lunghezza e Angolo
         dx = lines[:, 2] - lines[:, 0]
         dy = lines[:, 3] - lines[:, 1]
         lengths = np.sqrt(dx**2 + dy**2)
-        
-        # 5.2 Definisce i parametri di filtro Min e Max Length
-        
-        # Usa il valore MIN_LENGTH dal tuo config.py (che è 60 pixel)
-        MIN_LENGTH_FILTER = common_hough.get('MIN_LENGTH', 60) 
-        
-        # MAX_LENGTH_FILTER: Imposta un limite superiore (70% della larghezza dell'immagine)
-        # per rimuovere linee extra lunghe e rumorose (es. bordi lontani).
-        MAX_LENGTH_FILTER = image_data.shape[1] * 0.7 
-        
-        # 5.3 Crea la maschera di filtro
-        # Accetta solo segmenti che rientrano nell'intervallo di lunghezza
+        angles_rad = np.arctan2(dy, dx)
+        angles_deg = np.abs(np.degrees(angles_rad) % 180)
+
+        # 2. Maschera di Lunghezza
+        MIN_LENGTH_FILTER = common_hough.get('MIN_LENGTH', 60)
+        MAX_LENGTH_FILTER = w * 0.7 # 70% della larghezza immagine
         is_valid_length = (lengths >= MIN_LENGTH_FILTER) & (lengths <= MAX_LENGTH_FILTER)
-                         
-        # Applica la maschera e restituisce i segmenti filtrati
-        filtered_lines = lines[is_valid_length]
+
+        # 3. Maschera Angolare (solo Orizzontale o Verticale)
+        ANGLE_TOLERANCE = 5 # Usa una tolleranza fissa di 5 gradi
+        is_valid_angle = (angles_deg < ANGLE_TOLERANCE) | \
+                         (angles_deg > 180 - ANGLE_TOLERANCE) | \
+                         ((angles_deg > 90 - ANGLE_TOLERANCE) & (angles_deg < 90 + ANGLE_TOLERANCE))
+
+        # --- FASE C: Applica la maschera finale ---
+        final_mask = is_valid_length & is_valid_angle
+        filtered_lines = lines[final_mask]
         
         return filtered_lines
     else:
