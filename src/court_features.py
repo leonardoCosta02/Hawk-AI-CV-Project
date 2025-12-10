@@ -45,7 +45,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         lines = raw_lines.reshape(-1, 4)
         h, w, _ = image_data.shape # Altezza e Larghezza
 
-        # --- FASE A: Filtro di Regione di Interesse (ROI) ---
+        # --- FASE 1: Filtro di Regione di Interesse (ROI) ---
         X_MIN = int(w * common_hough['ROI_LEFT_PCT'])
         X_MAX = int(w * common_hough['ROI_RIGHT_PCT'])
         Y_MIN = int(h * common_hough['ROI_TOP_PCT'])
@@ -63,27 +63,29 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         if lines.size == 0:
             return np.array([])
 
-        # --- FASE B: Filtro di Lunghezza e Angolo ---
+        # --- FASE 2: Filtro di Lunghezza e Angolo ---
         
-        # 1. Calcola Lunghezza e Angolo
+        # 2.1 Calcola Lunghezza e Angolo
         dx = lines[:, 2] - lines[:, 0]
         dy = lines[:, 3] - lines[:, 1]
         lengths = np.sqrt(dx**2 + dy**2)
         angles_rad = np.arctan2(dy, dx)
         angles_deg = np.abs(np.degrees(angles_rad) % 180)
 
-        # 2. Maschera di Lunghezza
+        # 2.2 Maschera di Lunghezza
         MIN_LENGTH_FILTER = common_hough.get('MIN_LENGTH', 60)
         MAX_LENGTH_FILTER = w * 0.7 # 70% della larghezza immagine
         is_valid_length = (lengths >= MIN_LENGTH_FILTER) & (lengths <= MAX_LENGTH_FILTER)
 
-        # 3. Maschera Angolare (solo Orizzontale o Verticale)
-        ANGLE_TOLERANCE = 5 # Usa una tolleranza fissa di 5 gradi
+        # 2.3 Maschera Angolare (prospettiva)
+        # Usiamo 10 gradi di tolleranza per permettere alle linee distorte di passare.
+        ANGLE_TOLERANCE = common_hough.get('ANGLE_TOLERANCE_DEG', 10) 
         is_valid_angle = (angles_deg < ANGLE_TOLERANCE) | \
                          (angles_deg > 180 - ANGLE_TOLERANCE) | \
                          ((angles_deg > 90 - ANGLE_TOLERANCE) & (angles_deg < 90 + ANGLE_TOLERANCE))
 
-        # --- FASE C: Applica la maschera finale ---
+        # --- FASE 3: Applica la maschera finale ---
+        # Un segmento deve superare i test di lunghezza, angolo e ROI.
         final_mask = is_valid_length & is_valid_angle
         filtered_lines = lines[final_mask]
         
