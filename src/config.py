@@ -1,13 +1,13 @@
 # config.py
-import numpy as np # Necessario per definire la costante matematica 'np.pi'
+import numpy as np 
 
 # --- PARAMETRI DI HOUGH COMUNI (M1) ---
 HOUGH_COMMON_PARAMS = {
     'RHO': 1,               
     'THETA': np.pi / 180,   
-    'MIN_LENGTH': 60,       
+    'MIN_LENGTH': 80,       # OTTIMIZZATO: Aumentato da 60 a 80
     'MAX_GAP': 15,          
-    'ANGLE_TOLERANCE_DEG': 5, # Tolleranza angolare per il filtro in Omografia (FASE A)
+    'ANGLE_TOLERANCE_DEG': 5,
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
@@ -18,28 +18,29 @@ CAMPI_PATH = {
 }
 
 
+# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE (OTTIMIZZATI) ---
 
-
-# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
-
+# CEMENTO (Target: ridurre le linee)
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 70,       
-    'HOUGH_THRESHOLD': 40,   
+    'CANNY_HIGH': 100,      
+    'HOUGH_THRESHOLD': 60,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
+# ERBA (Target: mantenere o aumentare le linee deboli)
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 100,      
-    'HOUGH_THRESHOLD': 50,   
+    'CANNY_HIGH': 80,       
+    'HOUGH_THRESHOLD': 40,   
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
+# TERRA_BATTUTA (Target: ridurre drasticamente le 101 linee. Filtro aggressivo)
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 120,      
-    'HOUGH_THRESHOLD': 40,   
+    'CANNY_HIGH': 180,      
+    'HOUGH_THRESHOLD': 70,   
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
@@ -52,7 +53,6 @@ ALL_SURFACE_PARAMS = {
 
 
 # --- DIMENSIONI METRICHE PER L'OMOGRAFIA (M3) ---
-
 COURT_DIMENSIONS_METERS = {
     'SINGOLO_LARGHEZZA': 8.23,
     'DOPPIO_LARGHEZZA': 10.97,
