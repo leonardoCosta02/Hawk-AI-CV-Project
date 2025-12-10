@@ -23,24 +23,24 @@ CAMPI_PATH = {
 # CEMENTO (Target: ridurre le linee da 21)
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 80,      
-    'HOUGH_THRESHOLD': 65,   
+    'CANNY_HIGH': 120,      
+    'HOUGH_THRESHOLD': 40,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
 # ERBA (Target: linee deboli, mantenute basse)
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 220,       
-    'HOUGH_THRESHOLD': 75,   
+    'CANNY_HIGH': 100,       
+    'HOUGH_THRESHOLD': 30,   
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
 # TERRA_BATTUTA (Target: ridurre drasticamente le 101 linee. Filtro aggressivo)
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 240,      
-    'HOUGH_THRESHOLD': 60,   
+    'CANNY_HIGH': 150,      
+    'HOUGH_THRESHOLD': 45,   
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
