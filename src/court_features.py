@@ -118,13 +118,19 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
     horiz = segments[is_h]
     vert = segments[is_v]
+    print("=== DEBUG: M1 — FILTRI CENTRALITÀ ===")
+    print(f"Dopo filtro Y/X: {len(segments)} segmenti")
+    print("=== DEBUG: M1 — ANGOLI ===")
+    print(f"Orizzontali: {len(horiz)}  Verticali: {len(vert)}")
+
 
     # -----------------------------------------------------
     #   MERGE COLLINEARE
     # -----------------------------------------------------
     merged_h = _merge_collinear_segments(horiz, "H")
     merged_v = _merge_collinear_segments(vert, "V")
-
+    print("=== DEBUG: M1 — MERGE ===")
+    print(f"Dopo merge H: {len(merged_h)}  Dopo merge V: {len(merged_v)}")
     if len(merged_h) == 0 and len(merged_v) == 0:
         return np.array([])
 
