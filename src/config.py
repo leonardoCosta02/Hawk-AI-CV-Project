@@ -5,7 +5,7 @@ import numpy as np
 HOUGH_COMMON_PARAMS = {
     'RHO': 1,               
     'THETA': np.pi / 180,   
-    'MIN_LENGTH': 80,       # OTTIMIZZATO: Aumentato da 60 a 80 per ridurre il rumore.
+    'MIN_LENGTH': 60,       # OTTIMIZZATO: Aumentato da 60 a 80 per ridurre il rumore.
     'MAX_GAP': 15,          
     'ANGLE_TOLERANCE_DEG': 10,
 }
@@ -23,24 +23,24 @@ CAMPI_PATH = {
 # CEMENTO (Target: ridurre le linee da 21)
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 100,      
-    'HOUGH_THRESHOLD': 60,   
+    'CANNY_HIGH': 80,      
+    'HOUGH_THRESHOLD': 65,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
 # ERBA (Target: linee deboli, mantenute basse)
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 80,       
-    'HOUGH_THRESHOLD': 40,   
+    'CANNY_HIGH': 220,       
+    'HOUGH_THRESHOLD': 75,   
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
 # TERRA_BATTUTA (Target: ridurre drasticamente le 101 linee. Filtro aggressivo)
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 180,      
-    'HOUGH_THRESHOLD': 70,   
+    'CANNY_HIGH': 240,      
+    'HOUGH_THRESHOLD': 60,   
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
