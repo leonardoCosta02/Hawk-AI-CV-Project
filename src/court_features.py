@@ -1,116 +1,153 @@
-import cv2
+# src/court_features.py
+import cv2 as cv
 import numpy as np
+from src import config
 
 
-# ---------------------------------------------------------------------------------------
-#   MASCHERA DEL CAMPO
-# ---------------------------------------------------------------------------------------
+# ---------------------------------------------------------
+# 1) ROI MASK basata sulla proiezione verticale dei bordi
+# ---------------------------------------------------------
+def build_roi_mask(gray):
+    h, w = gray.shape
+    sobel_y = cv.Sobel(gray, cv.CV_32F, 0, 1, ksize=3)
+    proj = np.sum(np.abs(sobel_y), axis=1)
+    proj = (proj - proj.min()) / (proj.max() - proj.min() + 1e-6)
 
-def get_surface_mask(frame, surface):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    thresh = proj.mean() * 1.5
+    rows = np.where(proj > thresh)[0]
 
-    if surface == "ERBA":
-        lower = (35, 35, 40)
-        upper = (85, 255, 255)
-
-    elif surface == "CEMENTO":
-        lower = (90, 40, 40)
-        upper = (130, 255, 255)
-
-    elif surface == "TERRA_BATTUTA":
-        lower = (5, 70, 60)
-        upper = (20, 255, 255)
-
-    else:  # fallback
-        return np.ones((frame.shape[0], frame.shape[1]), dtype=np.uint8) * 255
-
-    mask = cv2.inRange(hsv, lower, upper)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE,
-                            np.ones((9, 9), np.uint8), iterations=2)
+    mask = np.zeros_like(gray, dtype=np.uint8)
+    if len(rows) > 0:
+        top = max(0, rows[0] - 20)
+        bottom = min(h, rows[-1] + 20)
+        mask[top:bottom, :] = 255
 
     return mask
 
 
-# ---------------------------------------------------------------------------------------
-#   LINEE BIANCHE DEL CAMPO
-# ---------------------------------------------------------------------------------------
-
-def extract_white_lines(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    lower_white = (0, 0, 180)
-    upper_white = (180, 40, 255)
-
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
-    mask_white = cv2.GaussianBlur(mask_white, (5, 5), 0)
-
-    return mask_white
+# ---------------------------------------------------------
+# 2) Filtro colore bianco
+# ---------------------------------------------------------
+def extract_white_pixels(image_bgr):
+    hsv = cv.cvtColor(image_bgr, cv.COLOR_BGR2HSV)
+    lower_white = np.array([0, 0, 180])
+    upper_white = np.array([180, 60, 255])
+    mask = cv.inRange(hsv, lower_white, upper_white)
+    return mask
 
 
-# ---------------------------------------------------------------------------------------
-#   MERGE LINEE HOUGH (UNIFICA LINEE MOLTO SIMILI)
-# ---------------------------------------------------------------------------------------
-
-def merge_similar_lines(lines, rho_thresh=20, theta_thresh=np.deg2rad(3)):
-    if lines is None or len(lines) == 0:
-        return np.array([])
+# ---------------------------------------------------------
+# 3) Merge dei segmenti collineari
+# ---------------------------------------------------------
+def merge_collinear_segments(segments, angle_tol=5, dist_thresh=20):
+    if len(segments) == 0:
+        return segments
 
     merged = []
-    used = [False] * len(lines)
+    used = np.zeros(len(segments), dtype=bool)
 
-    for i in range(len(lines)):
+    def seg_angle(seg):
+        x1, y1, x2, y2 = seg
+        ang = np.degrees(np.arctan2(y2 - y1, x2 - x1)) % 180
+        return ang
+
+    def seg_dist(a, b):
+        ax = (a[0] + a[2]) / 2
+        ay = (a[1] + a[3]) / 2
+        bx = (b[0] + b[2]) / 2
+        by = (b[1] + b[3]) / 2
+        return np.sqrt((ax - bx) ** 2 + (ay - by) ** 2)
+
+    for i in range(len(segments)):
         if used[i]:
             continue
 
-        rho_i, theta_i = lines[i][0]
-        group = [(rho_i, theta_i)]
+        group = [segments[i]]
         used[i] = True
 
-        for j in range(i + 1, len(lines)):
+        ai = seg_angle(segments[i])
+
+        for j in range(i + 1, len(segments)):
             if used[j]:
                 continue
+            aj = seg_angle(segments[j])
 
-            rho_j, theta_j = lines[j][0]
+            if abs(ai - aj) < angle_tol or abs(abs(ai - aj) - 180) < angle_tol:
+                if seg_dist(segments[i], segments[j]) < dist_thresh:
+                    used[j] = True
+                    group.append(segments[j])
 
-            if abs(rho_i - rho_j) < rho_thresh and abs(theta_i - theta_j) < theta_thresh:
-                group.append((rho_j, theta_j))
-                used[j] = True
+        xs, ys, xe, ye = [], [], [], []
+        for (x1, y1, x2, y2) in group:
+            xs += [x1, x2]
+            ys += [y1, y2]
+            xe = xs
+            ye = ys
 
-        g = np.array(group)
-        merged.append((float(np.mean(g[:, 0])), float(np.mean(g[:, 1]))))
+        merged.append([min(xs), min(ys), max(xs), max(ys)])
 
-    return np.array(merged)
+    return np.array(merged, dtype=np.int32)
 
 
-# ---------------------------------------------------------------------------------------
-#   FUNZIONE FINALE RICHIESTA
-# ---------------------------------------------------------------------------------------
-
+# ---------------------------------------------------------
+# 4) Funzione principale — RESTITUISCE SEGMENTI (x1,y1,x2,y2)
+# ---------------------------------------------------------
 def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.ndarray:
-    """
-    Trova le linee reali del campo da tennis.
-    Ritorna array di (rho, theta) già ripulite e unite.
-    """
-
-    # 1) Mask superficie
-    mask_surface = get_surface_mask(image_data, surface_type)
-
-    # 2) Linee bianche
-    mask_white = extract_white_lines(image_data)
-
-    # 3) Intersezione
-    mask = cv2.bitwise_and(mask_surface, mask_white)
-
-    # 4) Edge detection
-    edges = cv2.Canny(mask, 50, 120)
-
-    # 5) Hough
-    raw_lines = cv2.HoughLines(edges, 1, np.pi / 180, 40)
-
-    if raw_lines is None:
+    if image_data is None:
         return np.array([])
 
-    # 6) Merge linee
-    merged = merge_similar_lines(raw_lines)
+    params = config.ALL_SURFACE_PARAMS.get(surface_type.upper(), config.PARAMS_CEMENTO)
+    common = config.HOUGH_COMMON_PARAMS
+
+    # --- Preprocessing ---
+    gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
+    blurred = cv.GaussianBlur(gray, (5, 5), 1.0)
+
+    # --- ROI ---
+    roi_mask = build_roi_mask(gray)
+    masked_gray = cv.bitwise_and(gray, gray, mask=roi_mask)
+
+    # --- White mask ---
+    white_mask = extract_white_pixels(image_data)
+    masked_gray = cv.bitwise_and(masked_gray, masked_gray, mask=white_mask)
+
+    # --- Canny ---
+    edges = cv.Canny(masked_gray, params['CANNY_LOW'], params['CANNY_HIGH'])
+
+    # --- Hough Probabilistico ---
+    linesP = cv.HoughLinesP(
+        edges,
+        rho=common['RHO'],
+        theta=common['THETA'],
+        threshold=params['HOUGH_THRESHOLD'],
+        minLineLength=common['MIN_LENGTH'],
+        maxLineGap=common['MAX_GAP']
+    )
+
+    if linesP is None:
+        return np.array([])
+
+    segments = linesP.reshape(-1, 4)
+
+    # -----------------------------------------------------
+    #  Filtri su angolo (verticali/orizzontali)
+    # -----------------------------------------------------
+    dx = segments[:, 2] - segments[:, 0]
+    dy = segments[:, 3] - segments[:, 1]
+    angles = np.abs(np.degrees(np.arctan2(dy, dx)) % 180)
+
+    tol = common['ANGLE_TOLERANCE_DEG']
+    valid_angle = (
+        (angles < tol) |                      # orizzontali
+        (angles > 180 - tol) |                # orizzontali 180°
+        ((angles > 90 - tol) & (angles < 90 + tol))  # verticali
+    )
+
+    segments = segments[valid_angle]
+
+    # -----------------------------------------------------
+    #  Merge finale
+    # -----------------------------------------------------
+    merged = merge_collinear_segments(segments)
 
     return merged
