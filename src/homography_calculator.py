@@ -8,7 +8,7 @@ ENDC = "\033[0m"
 
 
 # ============================================================
-#  Intersezione tra due linee (robusta)
+#  Intersezione robusta tra due linee
 # ============================================================
 def find_intersection(s1, s2):
     x1, y1, x2, y2 = s1
@@ -28,29 +28,9 @@ def find_intersection(s1, s2):
     return Px, Py
 
 
-# ============================================================
-#  Semplice K-means 2D per angoli
-# ============================================================
-def kmeans_2d(vecs, iters=20):
-    c1 = vecs[0]
-    c2 = vecs[len(vecs)//3]
-
-    for _ in range(iters):
-        d1 = np.linalg.norm(vecs - c1, axis=1)
-        d2 = np.linalg.norm(vecs - c2, axis=1)
-        labels = (d2 < d1).astype(int)
-
-        if labels.sum() == 0 or labels.sum() == len(vecs):
-            break
-
-        c1 = vecs[labels == 0].mean(axis=0)
-        c2 = vecs[labels == 1].mean(axis=0)
-
-    return labels, c1, c2
-
 
 # ============================================================
-#  M3 — CALCOLO OMOGRAFIA (con DEBUG completo)
+#  M3 — CALCOLO OMOGRAFIA (versione con verticali perpendicolari)
 # ============================================================
 def calculate_homography(all_line_segments, surface_type='CEMENTO'):
 
@@ -59,65 +39,74 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     print("========================\n")
 
     if all_line_segments.size < 4:
-        print(f"{RED}Errore: meno di 4 segmenti totali (={all_line_segments.size}).{ENDC}")
+        print(f"{RED}Errore: meno di 4 segmenti totali.{ENDC}")
         return None, None
 
-    # ---------------------------------------------------------
-    # DEBUG INIZIALE
-    # ---------------------------------------------------------
     print(f"[DEBUG] Segmenti ricevuti da M1: {len(all_line_segments)}")
 
-    dx = all_line_segments[:,2] - all_line_segments[:,0]
-    dy = all_line_segments[:,3] - all_line_segments[:,1]
+    # ---------------------------------------------------------
+    # 1) Calcolo angoli di tutti i segmenti
+    # ---------------------------------------------------------
+    dx = all_line_segments[:, 2] - all_line_segments[:, 0]
+    dy = all_line_segments[:, 3] - all_line_segments[:, 1]
 
-    ang = np.arctan2(dy, dx)
-    degrees = (np.degrees(ang) % 180)
+    angles = (np.degrees(np.arctan2(dy, dx)) % 180)
 
-    print("\n[DEBUG] Primi 10 angoli (deg):", degrees[:10])
-    print("[DEBUG] Media angoli:", np.mean(degrees))
-    print("[DEBUG] Varianza angoli:", np.var(degrees))
+    print("[DEBUG] Primi 10 angoli :", angles[:10])
+    print("[DEBUG] Angolo medio    :", np.mean(angles))
 
     # ---------------------------------------------------------
-    # K-means clustering su vettori direzione
+    # 2) TROVIAMO LA DIREZIONE ORIZZONTALE DOMINANTE
+    #    (la mediana è molto robusta)
     # ---------------------------------------------------------
-    vecs = np.stack([np.cos(ang), np.sin(ang)], axis=1)
-    labels, c1, c2 = kmeans_2d(vecs)
+    theta_h = np.median(angles)
+    print(f"[DEBUG] Angolo orizzontale dominante (theta_h): {theta_h:.2f}°")
 
-    # angoli dei centroidi
-    cent = np.array([
-        np.degrees(np.arctan2(c1[1], c1[0])) % 180,
-        np.degrees(np.arctan2(c2[1], c2[0])) % 180
-    ])
+    # ---------------------------------------------------------
+    # 3) LA VERTICALE È PERPENDICOLARE ALL’ORIZZONTALE
+    # ---------------------------------------------------------
+    theta_v = (theta_h + 90) % 180
+    print(f"[DEBUG] Angolo verticale atteso (theta_v): {theta_v:.2f}°")
 
-    print("\n[DEBUG] Centroidi cluster (deg):", cent)
+    # ---------------------------------------------------------
+    # 4) CLASSIFICAZIONE ROBUSTA H/V BASATA SU DISTANZA ANGOLARE
+    # ---------------------------------------------------------
+    def angular_dist(a, b):
+        d = abs(a - b)
+        return min(d, 180 - d)
 
-    # cluster più vicino a 0° = orizzontale
-    h_idx = int(np.argmin(np.minimum(np.abs(cent), 180 - np.abs(cent))))
-    v_idx = 1 - h_idx
+    H_segments = []
+    V_segments = []
 
-    print(f"[DEBUG] Cluster H = {h_idx}, Cluster V = {v_idx}")
+    for seg, ang in zip(all_line_segments, angles):
+        dist_h = angular_dist(ang, theta_h)
+        dist_v = angular_dist(ang, theta_v)
 
-    # separa segmenti
-    H_segments = all_line_segments[labels == h_idx]
-    V_segments = all_line_segments[labels == v_idx]
+        if dist_h < dist_v:
+            H_segments.append(seg)
+        else:
+            V_segments.append(seg)
 
-    print(f"[DEBUG] Segmenti orizzontali trovati: {len(H_segments)}")
-    print(f"[DEBUG] Segmenti verticali trovati:   {len(V_segments)}")
+    H_segments = np.array(H_segments)
+    V_segments = np.array(V_segments)
+
+    print(f"[DEBUG] Segmenti orizzontali classificati : {len(H_segments)}")
+    print(f"[DEBUG] Segmenti verticali classificati   : {len(V_segments)}")
 
     if len(H_segments) < 2 or len(V_segments) < 2:
-        print(f"{RED}Errore: trovate troppo poche linee H o V dopo clustering.{ENDC}")
+        print(f"{RED}Errore: servono almeno 2 H e 2 V dopo la classificazione perpendicolare.{ENDC}")
         return None, None
 
     # ---------------------------------------------------------
-    # TEMPLATE FITTING
+    # 5) TEMPLATE FITTING
     # ---------------------------------------------------------
     print("\n[DEBUG] --- TEMPLATE FITTING ---")
 
-    h_y = (H_segments[:,1] + H_segments[:,3]) / 2
-    v_x = (V_segments[:,0] + V_segments[:,2]) / 2
+    h_y = (H_segments[:, 1] + H_segments[:, 3]) / 2
+    v_x = (V_segments[:, 0] + V_segments[:, 2]) / 2
 
-    print("[DEBUG] Y dei segmenti H:", h_y)
-    print("[DEBUG] X dei segmenti V:", v_x)
+    print("[DEBUG] Y orizzontali:", h_y)
+    print("[DEBUG] X verticali   :", v_x)
 
     h_sorted = np.argsort(h_y)[::-1]
     v_sorted = np.argsort(v_x)
@@ -127,46 +116,44 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     side_left = V_segments[v_sorted[0]]
     side_right = V_segments[v_sorted[-1]]
 
-    print("\n[DEBUG] Linee scelte:")
-    print("  Base Line    :", base_line)
-    print("  Service Line :", service_line)
-    print("  Left Line    :", side_left)
-    print("  Right Line   :", side_right)
+    print("\n[DEBUG] Linee scelte per omografia:")
+    print("  Base      :", base_line)
+    print("  Servizio  :", service_line)
+    print("  Sinistra  :", side_left)
+    print("  Destra    :", side_right)
 
     # ---------------------------------------------------------
-    # INTERSEZIONI (P1 P2 P3 P4)
+    # 6) CALCOLO INTERSEZIONI
     # ---------------------------------------------------------
-    print("\n[DEBUG] --- CALCOLO INTERSEZIONI ---")
+    print("\n[DEBUG] --- INTERSEZIONI ---")
 
     p1 = find_intersection(base_line, side_left)
     p2 = find_intersection(base_line, side_right)
     p3 = find_intersection(service_line, side_left)
     p4 = find_intersection(service_line, side_right)
 
-    print("[DEBUG] p1:", p1)
-    print("[DEBUG] p2:", p2)
-    print("[DEBUG] p3:", p3)
-    print("[DEBUG] p4:", p4)
+    print("  p1:", p1)
+    print("  p2:", p2)
+    print("  p3:", p3)
+    print("  p4:", p4)
 
     if None in [p1[0], p2[0], p3[0], p4[0]]:
-        print(f"{RED}Errore: non è stato possibile trovare tutte le intersezioni.{ENDC}")
+        print(f"{RED}Errore: intersezioni non valide.{ENDC}")
         return None, None
 
     points_pix = np.float32([p1, p2, p3, p4])
-    print("\n[DEBUG] Punti pixel finali:")
+    print("\n[DEBUG] Punti pixel usati:")
     print(points_pix)
 
     # ---------------------------------------------------------
-    # CALCOLO OMOGRAFIA
+    # 7) CALCOLO OMOGRAFIA
     # ---------------------------------------------------------
-    print("\n[DEBUG] --- CALCOLO MATRICE H ---")
-
     points_world = config.POINTS_WORLD_METERS
 
     H, mask = cv.findHomography(points_pix, points_world, cv.RANSAC, 5.0)
 
     if H is None:
-        print(f"{RED}Errore: cv.findHomography ha fallito (punti non coerenti).{ENDC}")
+        print(f"{RED}Errore: cv.findHomography ha fallito.{ENDC}")
         return None, None
 
     print(f"{RED}\n=== MATRICE H CALCOLATA ==={ENDC}")
@@ -175,8 +162,9 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     return H, np.array([base_line, service_line, side_left, side_right])
 
 
+
 # ============================================================
-#  Utility — mapping pixel → world
+#  Utility — pixel → world
 # ============================================================
 def map_pixel_to_world(H, pixel_coords):
     if H is None:
