@@ -7,7 +7,7 @@ HOUGH_COMMON_PARAMS = {
     'THETA': np.pi / 180,   
     'MIN_LENGTH': 60,       
     'MAX_GAP': 15,          
-    'ANGLE_TOLERANCE_DEG': 10, # Tolleranza angolare per il filtro in Omografia (FASE A)
+    'ANGLE_TOLERANCE_DEG': 5, # Tolleranza angolare per il filtro in Omografia (FASE A)
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
