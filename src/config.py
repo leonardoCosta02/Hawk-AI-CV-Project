@@ -22,9 +22,9 @@ CAMPI_PATH = {
 
 # CEMENTO (Target: ridurre le linee da 21)
 PARAMS_CEMENTO = {
-    'CANNY_LOW': 25,        
+    'CANNY_LOW': 15,        
     'CANNY_HIGH': 120,      
-    'HOUGH_THRESHOLD': 40,   
+    'HOUGH_THRESHOLD': 20,   
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
