@@ -5,7 +5,7 @@ import numpy as np
 HOUGH_COMMON_PARAMS = {
     'RHO': 1,               
     'THETA': np.pi / 180,   
-    'MIN_LENGTH': 80,       # OTTIMIZZATO: Aumentato da 60 a 80
+    'MIN_LENGTH': 80,       # OTTIMIZZATO: Aumentato da 60 a 80 per ridurre il rumore.
     'MAX_GAP': 15,          
     'ANGLE_TOLERANCE_DEG': 5,
 }
@@ -20,7 +20,7 @@ CAMPI_PATH = {
 
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE (OTTIMIZZATI) ---
 
-# CEMENTO (Target: ridurre le linee)
+# CEMENTO (Target: ridurre le linee da 21)
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
     'CANNY_HIGH': 100,      
@@ -28,7 +28,7 @@ PARAMS_CEMENTO = {
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
-# ERBA (Target: mantenere o aumentare le linee deboli)
+# ERBA (Target: linee deboli, mantenute basse)
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
     'CANNY_HIGH': 80,       
@@ -53,6 +53,7 @@ ALL_SURFACE_PARAMS = {
 
 
 # --- DIMENSIONI METRICHE PER L'OMOGRAFIA (M3) ---
+# Sezione mantenuta invariata
 COURT_DIMENSIONS_METERS = {
     'SINGOLO_LARGHEZZA': 8.23,
     'DOPPIO_LARGHEZZA': 10.97,
@@ -67,5 +68,4 @@ POINTS_WORLD_METERS = np.float32([
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0],
     [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
-    # ... altri punti non usati direttamente in questa omografia
 ])
