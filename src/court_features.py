@@ -63,8 +63,8 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     
     x_center = (segments[:, 0] + segments[:, 2]) / 2
     
-    X_MIN_PIXEL = w * 0.15
-    X_MAX_PIXEL = w * 0.85
+    X_MIN_PIXEL = w * 0.20
+    X_MAX_PIXEL = w * 0.80
     
     valid_x = (x_center > X_MIN_PIXEL) & (x_center < X_MAX_PIXEL)
     segments = segments[valid_x]
