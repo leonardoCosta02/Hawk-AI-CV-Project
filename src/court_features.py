@@ -46,7 +46,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     
     # Soglie in base alla dimensione dell'immagine (in pixel)
     Y_MIN_PIXEL = h * 0.30 # Minimo 20% dall'alto (esclude il pubblico)
-    Y_MAX_PIXEL = h * 0.85 # Massimo 95% dall'alto (esclude il rumore del fondo)
+    Y_MAX_PIXEL = h * 0.88 # Massimo 95% dall'alto (esclude il rumore del fondo)
     
     valid_y = (y_center > Y_MIN_PIXEL) & (y_center < Y_MAX_PIXEL)
     segments = segments[valid_y]
