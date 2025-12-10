@@ -30,7 +30,7 @@ def find_intersection(s1, s2):
 
 
 # ============================================================
-#  M3 — CALCOLO OMOGRAFIA (versione con verticali perpendicolari)
+#  M3 — CALCOLO OMOGRAFIA (versione corretta)
 # ============================================================
 def calculate_homography(all_line_segments, surface_type='CEMENTO'):
 
@@ -69,7 +69,7 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     print(f"[DEBUG] Angolo verticale atteso (theta_v): {theta_v:.2f}°")
 
     # ---------------------------------------------------------
-    # 4) CLASSIFICAZIONE ROBUSTA H/V BASATA SU DISTANZA ANGOLARE
+    # 4) CLASSIFICAZIONE SEGMENTI (basata su distanza angolare)
     # ---------------------------------------------------------
     def angular_dist(a, b):
         d = abs(a - b)
@@ -79,6 +79,7 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     V_segments = []
 
     for seg, ang in zip(all_line_segments, angles):
+
         dist_h = angular_dist(ang, theta_h)
         dist_v = angular_dist(ang, theta_v)
 
@@ -94,7 +95,7 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     print(f"[DEBUG] Segmenti verticali classificati   : {len(V_segments)}")
 
     if len(H_segments) < 2 or len(V_segments) < 2:
-        print(f"{RED}Errore: servono almeno 2 H e 2 V dopo la classificazione perpendicolare.{ENDC}")
+        print(f"{RED}Errore: servono almeno 2 H e 2 V dopo la classificazione.{ENDC}")
         return None, None
 
     # ---------------------------------------------------------
@@ -108,11 +109,13 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     print("[DEBUG] Y orizzontali:", h_y)
     print("[DEBUG] X verticali   :", v_x)
 
+    # Le due orizzontali più basse (base e servizio)
     h_sorted = np.argsort(h_y)[::-1]
-    v_sorted = np.argsort(v_x)
-
     base_line = H_segments[h_sorted[0]]
     service_line = H_segments[h_sorted[1]]
+
+    # Le due verticali più a sinistra e più a destra
+    v_sorted = np.argsort(v_x)
     side_left = V_segments[v_sorted[0]]
     side_right = V_segments[v_sorted[-1]]
 
@@ -123,7 +126,7 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     print("  Destra    :", side_right)
 
     # ---------------------------------------------------------
-    # 6) CALCOLO INTERSEZIONI
+    # 6) INTERSEZIONI
     # ---------------------------------------------------------
     print("\n[DEBUG] --- INTERSEZIONI ---")
 
