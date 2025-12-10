@@ -26,32 +26,35 @@ CAMPI_PATH = {
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE (AMMORBIDITI) ---
 
 # -----------------
-# CEMENTO: Soglie leggermente aumentate per filtrare rumore.
+# Nel tuo file config.py, aggiorna questa sezione:
+
+# -----------------
+# CEMENTO: Soglie ulteriormente abbassate.
 # -----------------
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 100,       # Aumentato (da 80 a 100)
-    'HOUGH_THRESHOLD': 60,   # Abbassato (da 65 a 60) per catturare più segmenti
+    'CANNY_HIGH': 70,       # DA 80 A 70: Molto più facile rilevare i bordi.
+    'HOUGH_THRESHOLD': 40,   # DA 50 A 40: Molto facile rilevare una linea.
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
 # -----------------
-# ERBA: Soglie ammorbidite rispetto all'ultimo tentativo aggressivo.
+# ERBA: Soglie ulteriormente ammorbidite.
 # -----------------
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 150,      # Abbassato (da 220 a 150)
-    'HOUGH_THRESHOLD': 75,   # Abbassato (da 90 a 75)
+    'CANNY_HIGH': 100,      # DA 120 A 100: Più facile che un bordo sia considerato 'certo'.
+    'HOUGH_THRESHOLD': 50,   # DA 60 A 50: Più facile rilevare.
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
 # -----------------
-# TERRA BATTUTA: Soglie abbassate per garantire il rilevamento delle linee spezzate.
+# TERRA BATTUTA: Soglie al limite per catturare linee spezzate.
 # -----------------
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 180,      # Abbassato (da 240 a 180)
-    'HOUGH_THRESHOLD': 60,   # ABBASSATO SIGNIFICATIVAMENTE (da 95 a 60) per linee spezzate.
+    'CANNY_HIGH': 120,      # DA 150 A 120: Molto permissivo per i bordi.
+    'HOUGH_THRESHOLD': 40,   # DA 50 A 40: Massima facilità per le linee spezzate.
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
