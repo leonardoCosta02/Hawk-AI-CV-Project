@@ -21,7 +21,7 @@ def find_intersection(segment1: np.ndarray, segment2: np.ndarray) -> tuple:
 
     D = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
     
-    epsilon = 1e-4 
+    epsilon = 1e-4 # Soglia per linee quasi parallele
 
     if abs(D) < epsilon: # Linee parallele o quasi parallele
         return None, None
@@ -42,20 +42,22 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print(f"Errore: Output del Modulo M1 insufficiente per calcolare l'omografia ({all_line_segments.size} segmenti trovati).")
         return None, None
     
-    # --- FASE A: Filtraggio Linee e Raggruppamento ---
+    # --- FASE A: Filtraggio Linee e Raggruppamento (Separazione H/V PERMISSIVA) ---
     
     dx = all_line_segments[:, 2] - all_line_segments[:, 0]
     dy = all_line_segments[:, 3] - all_line_segments[:, 1]
     angles = np.degrees(np.arctan2(dy, dx)) % 180
 
-    tol = config.HOUGH_COMMON_PARAMS['ANGLE_TOLERANCE_DEG']
+    # USIAMO UNA TOLLERANZA MOLTO ALTA (35 gradi) per SEPARARE i gruppi H e V
+    # Questo indirizza il problema della prospettiva estrema.
+    separation_tol = 35 
     
-    # Segmenti Orizzontali
-    is_horizontal = (angles < tol) | (angles > 180 - tol)
+    # Segmenti Orizzontali (Angoli vicini a 0°/180°)
+    is_horizontal = (angles < separation_tol) | (angles > 180 - separation_tol)
     horizontal_segments = all_line_segments[is_horizontal]
     
-    # Segmenti Verticali
-    is_vertical = (angles > 90 - tol) & (angles < 90 + tol)
+    # Segmenti Verticali (Angoli vicini a 90°)
+    is_vertical = (angles > 90 - separation_tol) & (angles < 90 + separation_tol)
     vertical_segments = all_line_segments[is_vertical]
 
     if len(horizontal_segments) < 2 or len(vertical_segments) < 2:
@@ -63,7 +65,8 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         return None, None
 
     # --- FASE B: Selezione Linee Chiave (Euristica basata su Centroidi Y) ---
-    # Logica per identificare il rettangolo di servizio (Base Line e Service Line)
+    # Questa fase è cruciale e si basa sul presupposto che il Modulo M1 (trova_linee)
+    # abbia già rimosso il rumore di fondo indesiderato tramite i filtri di centralità Y/X.
     
     try:
         # Ordina orizzontali per coordinata Y media decrescente (dal basso verso l'alto nell'immagine)
@@ -103,20 +106,19 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     # --- FASE C: Calcolo delle intersezioni (4 Punti Pixel) ---
     
     # I punti pixel devono corrispondere all'ordine dei POINTS_WORLD_METERS:
-    # [0.0, 0.0], [LARGHEZZA, 0.0], [0.0, SERVIZIO_RETE], [LARGHEZZA, SERVIZIO_RETE]
-    
-    # 1. P1: (0.0, 0.0) -> Intersezione Base Line (y=0.0) e Sinistra (x=0.0)
+    # P1: (0.0, 0.0) -> Base Line e Sinistra (x=0.0)
     p1x, p1y = find_intersection(base_line, side_line_left)
     
-    # 2. P2: (LARGHEZZA, 0.0) -> Intersezione Base Line e Destra 
+    # P2: (LARGHEZZA, 0.0) -> Base Line e Destra 
     p2x, p2y = find_intersection(base_line, side_line_right)
 
-    # 3. P3: (0.0, SERVIZIO_RETE) -> Intersezione Service Line e Sinistra
+    # P3: (0.0, SERVIZIO_RETE) -> Service Line e Sinistra
     p3x, p3y = find_intersection(service_line, side_line_left)
 
-    # 4. P4: (LARGHEZZA, SERVIZIO_RETE) -> Intersezione Service Line e Destra
+    # P4: (LARGHEZZA, SERVIZIO_RETE) -> Service Line e Destra
     p4x, p4y = find_intersection(service_line, side_line_right)
     
+    # Il controllo sulle intersezioni quasi parallele è già in find_intersection()
     if None in [p1x, p2x, p3x, p4x]:
         print(f"{RED}Errore: Impossibile trovare tutte le 4 intersezioni chiave (le linee selezionate sono quasi parallele).{ENDC}")
         return None, None
