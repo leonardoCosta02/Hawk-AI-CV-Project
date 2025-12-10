@@ -9,10 +9,11 @@ HOUGH_COMMON_PARAMS = {
     'MAX_GAP': 15,
     
     # --- NUOVI PARAMETRI ROI (Percentuali dello schermo) ---
-    # Questi filtrano segmenti fuori dal campo (spalti, pubblicità)
+    # Questi filtrano segmenti fuori dal campo (spalti, pubblicità, ecc.)
     'ROI_LEFT_PCT': 0.05,    # Esclude il 5% più a sinistra
     'ROI_RIGHT_PCT': 0.95,   # Esclude il 5% più a destra
     'ROI_TOP_PCT': 0.15,     # Esclude il 15% in alto (spalti lontani)
+    'ANGLE_TOLERANCE_DEG': 10, # Usato in court_features per il filtro angolare
 }
 
 # --- LISTA DEI PERCORSI DEI FRAME PER IL CARICAMENTO ---
@@ -22,35 +23,35 @@ CAMPI_PATH = {
     "TERRA_BATTUTA": 'data/static_court/static_court_frame_clay.png',
 }
 
-# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
+# --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE (AMMORBIDITI) ---
 
 # -----------------
-# CEMENTO: Soglie bilanciate.
+# CEMENTO: Soglie leggermente aumentate per filtrare rumore.
 # -----------------
 PARAMS_CEMENTO = {
     'CANNY_LOW': 25,        
-    'CANNY_HIGH': 80,       
-    'HOUGH_THRESHOLD': 65,   
+    'CANNY_HIGH': 100,       # Aumentato (da 80 a 100)
+    'HOUGH_THRESHOLD': 60,   # Abbassato (da 65 a 60) per catturare più segmenti
     'FRAME_PATH': CAMPI_PATH['CEMENTO'],
 }
 
 # -----------------
-# ERBA: Soglia Hough alzata per il rumore di texture.
+# ERBA: Soglie ammorbidite rispetto all'ultimo tentativo aggressivo.
 # -----------------
 PARAMS_ERBA = {
     'CANNY_LOW': 30,
-    'CANNY_HIGH': 220,      
-    'HOUGH_THRESHOLD': 90,   # AUMENTATO: Rende Hough più selettiva.
+    'CANNY_HIGH': 150,      # Abbassato (da 220 a 150)
+    'HOUGH_THRESHOLD': 75,   # Abbassato (da 90 a 75)
     'FRAME_PATH': CAMPI_PATH['ERBA'], 
 }
 
 # -----------------
-# TERRA BATTUTA: Soglia Hough molto alta per eliminare la texture.
+# TERRA BATTUTA: Soglie abbassate per garantire il rilevamento delle linee spezzate.
 # -----------------
 PARAMS_TERRA_BATTUTA = {
     'CANNY_LOW': 40,
-    'CANNY_HIGH': 240,      
-    'HOUGH_THRESHOLD': 95,   # AUMENTATO: Rende Hough molto selettiva.
+    'CANNY_HIGH': 180,      # Abbassato (da 240 a 180)
+    'HOUGH_THRESHOLD': 60,   # ABBASSATO SIGNIFICATIVAMENTE (da 95 a 60) per linee spezzate.
     'FRAME_PATH': CAMPI_PATH['TERRA_BATTUTA'],
 }
 
@@ -74,10 +75,7 @@ COURT_DIMENSIONS_METERS = {
 
 # 12 Punti di Riferimento in Metri (World Coordinates)
 POINTS_WORLD_METERS = np.float32([
-    # X (Larghezza)        Y (Lunghezza)
-    # -----------------------------------------------------------------------
     # ... [LA TUA LISTA DI 12 PUNTI È IMMUTATA E CORRETTA QUI] ...
-    # -----------------------------------------------------------------------
     [0.0, 0.0],
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0],
     [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],
