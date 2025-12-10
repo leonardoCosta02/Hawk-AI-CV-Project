@@ -17,13 +17,7 @@ CAMPI_PATH = {
     "TERRA_BATTUTA": 'data/static_court/static_court_frame_clay.png',
 }
 
-# --- PARAMETRI DI CROPPING FISSI (M1) (Forniti dall'utente) ---
-# Queste coordinate (x_start, y_start, x_end, y_end) isolano il campo da tennis
-CROPPING_PARAMS = {
-    'CEMENTO': [70, 150, 1100, 1100],    # Ritaglio per CEMENTO
-    'ERBA': [70, 150, 1100, 900],        # Ritaglio per ERBA
-    'TERRA_BATTUTA': [150, 100, 900, 550], # Ritaglio per TERRA_BATTUTA
-}
+
 
 
 # --- PARAMETRI OTTIMALI CANNY (M1) PER SUPERFICIE ---
