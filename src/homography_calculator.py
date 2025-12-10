@@ -78,7 +78,7 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
         print("Errore: Non sono stati trovati abbastanza segmenti Orizzontali o Verticali (minimo 2 ciascuno).")
         return None, None
 
-    # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
+     # --- FASE B: IDENTIFICAZIONE DEI SEGMENTI PIÙ ESTERNI ---
     
     # 1. Linea Orizzontale di Fondo (Base Line: la più in basso nel frame, Y max)
     h_y_coords = (horizontal_segments[:, 1] + horizontal_segments[:, 3]) / 2 
@@ -94,19 +94,23 @@ def calculate_homography(all_line_segments: np.ndarray, surface_type: str = 'CEM
     right_line_index = np.argmax(v_x_coords) 
     right_line = vertical_segments[right_line_index] 
     
-    # 4. Linea Orizzontale di Servizio (Service Line: la più in alto tra le restanti orizzontali)
-    h_y_coords_filtered = np.delete(h_y_coords, base_line_index)
-    h_segments_filtered = np.delete(horizontal_segments, base_line_index, axis=0)
+    # 4. Linea Orizzontale di Servizio (Service Line: la seconda più in basso)
+    
+    # Crea una maschera temporanea che esclude la Linea di Fondo
+    temp_mask = np.ones(len(horizontal_segments), dtype=bool)
+    temp_mask[base_line_index] = False
+    
+    h_y_coords_filtered = h_y_coords[temp_mask]
+    h_segments_filtered = horizontal_segments[temp_mask]
     
     if len(h_segments_filtered) > 0:
-        service_line_index = np.argmin(h_y_coords_filtered)
-        service_line = h_segments_filtered[service_line_index]
+        # Troviamo l'indice del MAX Y rimanente (che è la seconda linea più in basso)
+        # Questo garantisce che la Service Line vicina venga scelta, ignorando il campo lontano.
+        second_closest_line_index = np.argmax(h_y_coords_filtered) 
+        service_line = h_segments_filtered[second_closest_line_index]
     else:
         print("Errore: Non sono state trovate almeno due linee orizzontali chiave.")
         return None, None
-    
-    # Raccoglie i quattro segmenti chiave per la visualizzazione
-    selected_segments = np.array([base_line, left_line, right_line, service_line], dtype=np.int32)
 
 
     # --- FASE C: CALCOLO DELLE 4 INTERSEZIONI (PUNTI PIXEL) ---
