@@ -136,7 +136,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     x_center = (segments[:,0] + segments[:,2]) / 2
 
     valid_y = (y_center > h*0.30) & (y_center < h*0.84)
-    valid_x = (x_center > w*0.20) & (x_center < w*0.80)
+    valid_x = (x_center > w*0.30) & (x_center < w*0.70)
 
     segments = segments[valid_y & valid_x]
 
