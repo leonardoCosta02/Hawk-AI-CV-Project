@@ -1,6 +1,7 @@
 import numpy as np
 def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     RED = "\033[91m"
+    ENDC = "\033[0m"
     if all_line_segments is None or len(all_line_segments) < 4:
         print(f"{RED}Errore: meno di 4 segmenti validi.{ENDC}")
         return None, None, None
