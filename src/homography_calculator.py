@@ -202,3 +202,15 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     # sebbene la tua Cella 4 precedente gestisse solo 2 (H, segmenti).
     # Uso solo H e segmenti come output principali per non rompere la tua Cella 4.
     return H, selected_segments.astype(np.int32), points_pix.astype(np.int32)
+    # ============================================================
+#  Utility: Pixel → World
+# ============================================================
+def map_pixel_to_world(H, pixel_coords):
+    if H is None:
+        return np.array([0.0, 0.0])
+    u, v = pixel_coords
+    ph = np.array([u, v, 1.0])
+    wh = H @ ph
+    X = wh[0]/wh[2]
+    Y = wh[1]/wh[2]
+    return np.array([X, Y])
