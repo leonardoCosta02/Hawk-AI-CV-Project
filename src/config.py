@@ -59,8 +59,8 @@ ALL_SURFACE_PARAMS = {
 CENTRALITY_PARAMS = {
     # CEMENTO (Esempio ottimizzato per inquadratura standard)
     'CEMENTO': {
-        'Y_MIN_PCT': 0.25, # Più campo lontano
-        'Y_MAX_PCT': 0.88, # Più campo vicino
+        'Y_MIN_PCT': 0.30, # Più campo lontano
+        'Y_MAX_PCT': 0.80, # Più campo vicino
         'X_MIN_PCT': 0.20, # Margini più larghi
         'X_MAX_PCT': 0.80,
     },
