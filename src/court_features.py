@@ -104,15 +104,18 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
     params = config.ALL_SURFACE_PARAMS.get(surface_type.upper(), config.PARAMS_CEMENTO)
     common = config.HOUGH_COMMON_PARAMS
+    
+    # RECUPERO PARAMETRI DI CENTRALITÀ SPECIFICI PER LA SUPERFICIE
+    centrality_params = config.CENTRALITY_PARAMS.get(surface_type.upper(), 
+                                                     config.CENTRALITY_PARAMS['CEMENTO'])
 
     h, w, _ = image_data.shape
 
     # ---------------------------
-    # Preprocessing
+    # Preprocessing & Hough
     # ---------------------------
     gray = cv.cvtColor(image_data, cv.COLOR_BGR2GRAY)
     blurred = cv.GaussianBlur(gray, (5,5), 1.0)
-
     edges = cv.Canny(blurred, params['CANNY_LOW'], params['CANNY_HIGH'])
 
     linesP = cv.HoughLinesP(
@@ -130,13 +133,17 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
     segments = linesP.reshape(-1,4)
 
     # -----------------------------------------------------
-    #   FILTRI DI CENTRALITÀ (Y → elimina pubblico, X → elimina bordo campo)
+    # 	FILTRI DI CENTRALITÀ (Parametrizzati)
     # -----------------------------------------------------
     y_center = (segments[:,1] + segments[:,3]) / 2
     x_center = (segments[:,0] + segments[:,2]) / 2
 
-    valid_y = (y_center > h*0.30) & (y_center < h*0.84)
-    valid_x = (x_center > w*0.30) & (x_center < w*0.70)
+    # Applicazione dei parametri caricati da config.py
+    valid_y = (y_center > h * centrality_params['Y_MIN_PCT']) & \
+              (y_center < h * centrality_params['Y_MAX_PCT'])
+              
+    valid_x = (x_center > w * centrality_params['X_MIN_PCT']) & \
+              (x_center < w * centrality_params['X_MAX_PCT'])
 
     segments = segments[valid_y & valid_x]
 
@@ -144,7 +151,7 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
         return np.array([])
 
     # -----------------------------------------------------
-    #   SEPARA SEGMENTI IN H e V (Semplice)
+    # 	SEPARA SEGMENTI IN H e V (Semplice)
     # -----------------------------------------------------
     dx = segments[:,2] - segments[:,0]
     dy = segments[:,3] - segments[:,1]
@@ -155,6 +162,8 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
     horiz = segments[is_h]
     vert = segments[is_v]
+    
+    # DEBUG OUTPUT
     print("=== DEBUG: M1 — FILTRI CENTRALITÀ ===")
     print(f"Dopo filtro Y/X: {len(segments)} segmenti")
     print("=== DEBUG: M1 — ANGOLI ===")
@@ -162,13 +171,16 @@ def trova_linee(image_data: np.ndarray, surface_type: str = 'CEMENTO') -> np.nda
 
 
     # -----------------------------------------------------
-    #   MERGE COLLINEARE
+    # 	MERGE COLLINEARE
     # -----------------------------------------------------
     merged_h = _merge_collinear_segments(horiz, "H")
     merged_v = _merge_collinear_segments(vert, "V")
+    
     print("=== DEBUG: M1 — MERGE ===")
     print(f"Dopo merge H: {len(merged_h)}  Dopo merge V: {len(merged_v)}")
+    
     if len(merged_h) == 0 and len(merged_v) == 0:
         return np.array([])
 
+    # Restituisce l'unione dei segmenti H e V (tipo np.int32)
     return np.vstack([merged_h, merged_v]) if len(merged_h) and len(merged_v) else (merged_h if len(merged_h) else merged_v)
