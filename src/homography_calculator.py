@@ -1,3 +1,4 @@
+import numpy as np
 def calculate_homography(all_line_segments, surface_type='CEMENTO'):
     RED = "\033[91m"
     if all_line_segments is None or len(all_line_segments) < 4:
