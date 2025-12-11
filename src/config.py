@@ -61,7 +61,7 @@ CENTRALITY_PARAMS = {
     'CEMENTO': {
         'Y_MIN_PCT': 0.30, # Più campo lontano
         'Y_MAX_PCT': 0.75, # Più campo vicino
-        'X_MIN_PCT': 0.35, # Margini più larghi
+        'X_MIN_PCT': 0.30, # Margini più larghi
         'X_MAX_PCT': 0.70,
     },
     # ERBA (Meno rumore di texture, ma più problemi di prospettiva)
