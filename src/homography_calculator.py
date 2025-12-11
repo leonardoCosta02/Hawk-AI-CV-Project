@@ -182,7 +182,7 @@ def calculate_homography(all_line_segments, surface_type='CEMENTO'):
         return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
 
     area = quad_area(points_pix[[0, 1, 3, 2]]) # [0, 1, 3, 2] = p1, p2, p4, p3
-    if area < 500.0:
+    if area < 10000.0:
         print(f"{RED}Errore: area quadrilatero troppo piccola ({area:.2f}), punti non validi.{ENDC}")
         return None, None, None
 
