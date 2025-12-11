@@ -7,7 +7,14 @@ from src import config
 # ===========================================================
 #  MERGE DI SEGMENTI COLLINEARI (orizzontali e verticali)
 # ===========================================================
+# ---------- REPLACEMENT for _merge_collinear_segments ----------
 def _merge_collinear_segments(segments, orientation, gap_tol_px=45):
+    """
+    Merges collinear segments but preserves their slope (perspective).
+    For each cluster we fit a line (cv.fitLine) on all endpoints and then
+    compute the projected min/max points along the fitted line to build
+    the merged segment.
+    """
     if len(segments) == 0:
         return np.array([])
 
@@ -15,45 +22,75 @@ def _merge_collinear_segments(segments, orientation, gap_tol_px=45):
     used = np.zeros(len(segments), dtype=bool)
 
     for i in range(len(segments)):
-        if used[i]: 
+        if used[i]:
             continue
 
-        a = segments[i]
+        # Start a new cluster with segment i
         used[i] = True
+        cluster_idxs = [i]
 
-        xs = [a[0], a[2]]
-        ys = [a[1], a[3]]
+        # center of segment i
+        axc = (segments[i][0] + segments[i][2]) / 2.0
+        ayc = (segments[i][1] + segments[i][3]) / 2.0
 
-        axc = (a[0] + a[2]) / 2
-        ayc = (a[1] + a[3]) / 2
-
+        # collect segments whose center is near (within gap_tol_px) on the main axis
         for j in range(i+1, len(segments)):
             if used[j]:
                 continue
-
-            b = segments[j]
-            bxc = (b[0] + b[2]) / 2
-            byc = (b[1] + b[3]) / 2
+            bxc = (segments[j][0] + segments[j][2]) / 2.0
+            byc = (segments[j][1] + segments[j][3]) / 2.0
 
             if orientation == "H":
                 if abs(byc - ayc) < gap_tol_px:
-                    xs += [b[0], b[2]]
-                    ys += [b[1], b[3]]
+                    cluster_idxs.append(j)
                     used[j] = True
-
-            else:  # verticale
+            else:  # "V"
                 if abs(bxc - axc) < gap_tol_px:
-                    xs += [b[0], b[2]]
-                    ys += [b[1], b[3]]
+                    cluster_idxs.append(j)
                     used[j] = True
 
-        # costruttore finale
-        if orientation == "H":
-            merged.append([min(xs), ayc, max(xs), ayc])
-        else:
-            merged.append([axc, min(ys), axc, max(ys)])
+        # gather all endpoints of the cluster
+        pts = []
+        for idx in cluster_idxs:
+            x1, y1, x2, y2 = segments[idx]
+            pts.append([x1, y1])
+            pts.append([x2, y2])
+        pts = np.array(pts, dtype=np.float32)
+
+        # Fit a line using OpenCV (returns vx,vy, x0,y0)
+        # handle small clusters robustly: if only two points, just use them directly
+        if pts.shape[0] < 3:
+            # simple bounding segment along dominant axis
+            xs = pts[:,0]
+            ys = pts[:,1]
+            if orientation == "H":
+                y_mean = np.mean(ys)
+                merged.append([int(np.min(xs)), int(y_mean), int(np.max(xs)), int(y_mean)])
+            else:
+                x_mean = np.mean(xs)
+                merged.append([int(x_mean), int(np.min(ys)), int(x_mean), int(np.max(ys))])
+            continue
+
+        vx, vy, x0, y0 = cv.fitLine(pts, cv.DIST_L2, 0, 0.01, 0.01)
+        vx = float(vx); vy = float(vy); x0 = float(x0); y0 = float(y0)
+
+        # parameterize line: P(t) = (x0, y0) + t*(vx, vy)
+        # compute t for each point projection: t = ( (p - p0) · v ) / (v·v)
+        v_norm2 = vx*vx + vy*vy
+        ts = []
+        for (px, py) in pts:
+            t = ((px - x0)*vx + (py - y0)*vy) / v_norm2
+            ts.append(t)
+        tmin = min(ts)
+        tmax = max(ts)
+
+        p_min = (x0 + tmin*vx, y0 + tmin*vy)
+        p_max = (x0 + tmax*vx, y0 + tmax*vy)
+        merged.append([int(round(p_min[0])), int(round(p_min[1])),
+                       int(round(p_max[0])), int(round(p_max[1]))])
 
     return np.array(merged, dtype=int)
+
 
 
 
