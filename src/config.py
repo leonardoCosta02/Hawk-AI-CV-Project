@@ -60,9 +60,9 @@ CENTRALITY_PARAMS = {
     # CEMENTO (Esempio ottimizzato per inquadratura standard)
     'CEMENTO': {
         'Y_MIN_PCT': 0.30, # Più campo lontano
-        'Y_MAX_PCT': 0.80, # Più campo vicino
-        'X_MIN_PCT': 0.20, # Margini più larghi
-        'X_MAX_PCT': 0.80,
+        'Y_MAX_PCT': 0.75, # Più campo vicino
+        'X_MIN_PCT': 0.25, # Margini più larghi
+        'X_MAX_PCT': 0.75,
     },
     # ERBA (Meno rumore di texture, ma più problemi di prospettiva)
     'ERBA': {
