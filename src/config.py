@@ -50,7 +50,35 @@ ALL_SURFACE_PARAMS = {
     'ERBA': PARAMS_ERBA,
     'TERRA_BATTUTA': PARAMS_TERRA_BATTUTA,
 }
+# Nel tuo file config.py, aggiungi questa sezione:
 
+# --- PARAMETRI DI FILTRO DI CENTRALITÀ PER SUPERFICIE ---
+# Questi parametri definiscono la Regione di Interesse percentualmente (0.0 a 1.0)
+# per eliminare il rumore periferico (spalti, bordi campo).
+
+CENTRALITY_PARAMS = {
+    # CEMENTO (Esempio ottimizzato per inquadratura standard)
+    'CEMENTO': {
+        'Y_MIN_PCT': 0.25, # Più campo lontano
+        'Y_MAX_PCT': 0.88, # Più campo vicino
+        'X_MIN_PCT': 0.20, # Margini più larghi
+        'X_MAX_PCT': 0.80,
+    },
+    # ERBA (Meno rumore di texture, ma più problemi di prospettiva)
+    'ERBA': {
+        'Y_MIN_PCT': 0.30,
+        'Y_MAX_PCT': 0.84,
+        'X_MIN_PCT': 0.25,
+        'X_MAX_PCT': 0.75,
+    },
+    # TERRA_BATTUTA (Il più difficile, potremmo aver bisogno di un range più stretto)
+    'TERRA_BATTUTA': {
+        'Y_MIN_PCT': 0.35,
+        'Y_MAX_PCT': 0.80,
+        'X_MIN_PCT': 0.30,
+        'X_MAX_PCT': 0.70,
+    },
+}
 
 # --- DIMENSIONI METRICHE PER L'OMOGRAFIA (M3) ---
 # Sezione mantenuta invariata
