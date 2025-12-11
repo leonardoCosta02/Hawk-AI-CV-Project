@@ -73,8 +73,8 @@ CENTRALITY_PARAMS = {
     },
     # TERRA_BATTUTA (Il più difficile, potremmo aver bisogno di un range più stretto)
     'TERRA_BATTUTA': {
-        'Y_MIN_PCT': 0.35,
-        'Y_MAX_PCT': 0.80,
+        'Y_MIN_PCT': 0.30,
+        'Y_MAX_PCT': 0.84,
         'X_MIN_PCT': 0.30,
         'X_MAX_PCT': 0.70,
     },
