@@ -1,127 +1,135 @@
 # src/homography_calculator.py
-
 import cv2 as cv
 import numpy as np
 from src import config
 
+RED = "\033[91m"
+GREEN = "\033[92m"
+ENDC = "\033[0m"
 
-# --------------------------------------------------------------------
-# Funzione di utilità per calcolare intersezione tra due linee
-# Ogni linea è [x1, y1, x2, y2]
-# --------------------------------------------------------------------
-def _intersection(l1, l2):
-    x1, y1, x2, y2 = l1
-    x3, y3, x4, y4 = l2
+# ============================================================
+#  Intersezione robusta tra due linee
+# ============================================================
+def find_intersection(s1, s2):
+    x1, y1, x2, y2 = s1
+    x3, y3, x4, y4 = s2
 
-    A = np.array([[x2-x1, x3-x4],
-                  [y2-y1, y3-y4]], dtype=float)
-    B = np.array([x3-x1, y3-y1], dtype=float)
+    D = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
 
-    det = np.linalg.det(A)
-    if abs(det) < 1e-5:
-        return None  # linee parallele
+    if abs(D) < 1e-4:
+        return None, None
 
-    t, u = np.linalg.solve(A, B)
-    px = x1 + t*(x2-x1)
-    py = y1 + t*(y2-y1)
-    return (px, py)
+    t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / D
+    Px = x1 + t * (x2 - x1)
+    Py = y1 + t * (y2 - y1)
+    return Px, Py
 
+# ============================================================
+#  Calcolo Omografia M3 per area di servizio singolo
+# ============================================================
+def calculate_homography(all_line_segments, surface_type='CEMENTO'):
+    if all_line_segments is None or len(all_line_segments) < 4:
+        print(f"{RED}Errore: meno di 4 segmenti validi.{ENDC}")
+        return None, None
 
-# --------------------------------------------------------------------
-# Classifica le linee raggruppando in 4 categorie:
-# - fondo (orizzontale alta)
-# - rete (orizzontale bassa)
-# - lato sinistro (verticale sinistra)
-# - lato destro (verticale destra)
-# --------------------------------------------------------------------
-def _classify_lines(segments, h, w):
-    horiz = []
-    vert = []
+    # -------------------------------
+    # 1) Calcolo angoli e classificazione H/V
+    # -------------------------------
+    dx = all_line_segments[:, 2] - all_line_segments[:, 0]
+    dy = all_line_segments[:, 3] - all_line_segments[:, 1]
+    angles = (np.degrees(np.arctan2(dy, dx)) % 180)
+    lengths = np.sqrt(dx**2 + dy**2)
 
-    for s in segments:
-        x1, y1, x2, y2 = s
-        dx = x2 - x1
-        dy = y2 - y1
-        ang = abs(np.degrees(np.arctan2(dy, dx)) % 180)
-        if ang < 45 or ang > 135:
-            horiz.append(s)
+    # Istogramma e picchi
+    hist, bins = np.histogram(angles, bins=180, range=(0, 180))
+    kernel = np.array([1.0, 1.0, 1.0])
+    hist_smooth = np.convolve(hist.astype(float), kernel / kernel.sum(), mode='same')
+    peak_bins = np.argsort(hist_smooth)[-2:]
+    peak_angles = bins[peak_bins] + (bins[1]-bins[0])/2.0
+    peak_angles = np.sort(peak_angles)
+
+    # Se picchi non validi fallback segmento più lungo
+    if len(peak_angles) < 2:
+        longest_index = np.argmax(lengths)
+        theta_h = angles[longest_index]
+        theta_v = (theta_h + 90.0) % 180
+    else:
+        dist0 = [min(abs(pa), abs(pa-180)) for pa in peak_angles]
+        h_idx = np.argmin(dist0)
+        v_idx = 1 - h_idx
+        theta_h = peak_angles[h_idx]
+        theta_v = peak_angles[v_idx]
+
+    # Classificazione H/V
+    H_segments, V_segments = [], []
+    for seg, ang in zip(all_line_segments, angles):
+        if abs((ang - theta_h + 180) % 180) < abs((ang - theta_v + 180) % 180):
+            H_segments.append(seg)
         else:
-            vert.append(s)
+            V_segments.append(seg)
 
-    if len(horiz) < 2 or len(vert) < 2:
-        return None
+    H_segments = np.array(H_segments) if H_segments else np.empty((0, 4))
+    V_segments = np.array(V_segments) if V_segments else np.empty((0, 4))
 
-    # ordina orizzontali per y
-    horiz = sorted(horiz, key=lambda s: (s[1] + s[3]) / 2)
-    bottom_line = horiz[0]
-    net_line = horiz[-1]
+    if len(H_segments) < 2 or len(V_segments) < 2:
+        print(f"{RED}Errore: servono almeno 2 H e 2 V.{ENDC}")
+        return None, None
 
-    # ordina verticali per x
-    vert = sorted(vert, key=lambda s: (s[0] + s[2]) / 2)
-    left_line = vert[0]
-    right_line = vert[-1]
+    # -------------------------------
+    # 2) Selezione linee principali: base, servizio, sinistra, destra
+    # -------------------------------
+    h_y = (H_segments[:,1] + H_segments[:,3]) / 2.0
+    v_x = (V_segments[:,0] + V_segments[:,2]) / 2.0
 
-    return {
-        "bottom": bottom_line,
-        "net": net_line,
-        "left": left_line,
-        "right": right_line
-    }
+    # Orizzontali: base = più bassa (maggiore Y), servizio = seconda più bassa
+    h_sorted = np.argsort(h_y)[::-1]
+    base_line = H_segments[h_sorted[0]]
+    service_line = H_segments[h_sorted[1]]
 
+    # Verticali: sinistra = più piccola X, destra = più grande X
+    v_sorted = np.argsort(v_x)
+    side_left = V_segments[v_sorted[0]]
+    side_right = V_segments[v_sorted[-1]]
 
-# --------------------------------------------------------------------
-# Ottiene i 4 angoli del rettangolo d'interesse (servizio vicino)
-# --------------------------------------------------------------------
-def _get_service_corners(lines):
-    P_bl = _intersection(lines["bottom"], lines["left"])
-    P_br = _intersection(lines["bottom"], lines["right"])
-    P_tl = _intersection(lines["net"],    lines["left"])
-    P_tr = _intersection(lines["net"],    lines["right"])
+    selected_segments = np.array([base_line, service_line, side_left, side_right], dtype=float)
 
-    if None in (P_bl, P_br, P_tl, P_tr):
-        return None
+    # -------------------------------
+    # 3) Calcolo intersezioni
+    # -------------------------------
+    p1 = find_intersection(base_line, side_left)
+    p2 = find_intersection(base_line, side_right)
+    p3 = find_intersection(service_line, side_left)
+    p4 = find_intersection(service_line, side_right)
 
-    return np.float32([P_bl, P_br, P_tl, P_tr])
+    points_pix = np.float32([p1, p2, p3, p4])
 
+    # Verifica punti
+    for i, p in enumerate(points_pix, 1):
+        if p[0] is None or p[1] is None or not np.isfinite(p[0]) or not np.isfinite(p[1]):
+            print(f"{RED}Errore: intersezione p{i} non valida.{ENDC}")
+            return None, None
 
-# --------------------------------------------------------------------
-# CALCOLO OMOLOGRAFIA AUTOMATICA
-# --------------------------------------------------------------------
-def compute_homography(segments: np.ndarray, image_shape) -> tuple:
-    """
-    Restituisce:
-      - H: matrice 3x3 di omografia (pixel → metri)
-      - pts_src: punti sorgente in pixel
-      - pts_dst: punti destinazione (mondo in metri)
-
-    Ritorna (None, None, None) se non trovabili.
-    """
-
-    if segments is None or len(segments) < 4:
-        return None, None, None
-
-    h, w = image_shape[:2]
-
-    # 1) Classifica linee
-    lines = _classify_lines(segments, h, w)
-    if lines is None:
-        print("Homography: linee insufficienti.")
-        return None, None, None
-
-    # 2) Intersezioni = corner area servizio
-    pts_src = _get_service_corners(lines)
-    if pts_src is None:
-        print("Homography: impossibile trovare gli incroci.")
-        return None, None, None
-
-    # 3) World coordinates (metri)
-    pts_dst = config.POINTS_WORLD_METERS.copy()
-
-    # 4) Homografia
-    H, status = cv.findHomography(pts_src, pts_dst, cv.RANSAC, 5.0)
+    # -------------------------------
+    # 4) Calcolo omografia
+    # -------------------------------
+    points_world = config.POINTS_WORLD_METERS
+    H, mask = cv.findHomography(points_pix, points_world, cv.RANSAC, 5.0)
 
     if H is None:
-        print("Homography: fallita.")
-        return None, None, None
+        print(f"{RED}Errore: cv.findHomography ha fallito.{ENDC}")
+        return None, None
 
-    return H, pts_src, pts_dst
+    return H, selected_segments.astype(np.int32), points_pix.astype(np.int32)
+
+# ============================================================
+#  Utility: Pixel → World
+# ============================================================
+def map_pixel_to_world(H, pixel_coords):
+    if H is None:
+        return np.array([0.0, 0.0])
+    u, v = pixel_coords
+    ph = np.array([u, v, 1.0])
+    wh = H @ ph
+    X = wh[0]/wh[2]
+    Y = wh[1]/wh[2]
+    return np.array([X, Y])
