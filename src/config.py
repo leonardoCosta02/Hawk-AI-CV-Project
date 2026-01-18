@@ -143,8 +143,8 @@ COURT_DIMENSIONS_METERS = {
 # Used as 'dst_points' in cv2.findHomography().
 # Mapping represents the "Near Service Box" area.
 POINTS_WORLD_METERS = np.float32([
-    [0.0, 0.0],                                                                    # Top-Left (Net-Singles intersection)
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0],                           # Top-Right
-    [0.0, COURT_DIMENSIONS_METERS['SERVIZIO_RETE']],                               # Bottom-Left (Service Line)
-    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], COURT_DIMENSIONS_METERS['SERVIZIO_RETE']], # Bottom-Right
+    [0.0, 0.0], # Angolo fondo-laterale SX
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # Angolo fondo-laterale DX
+    [0.0, 5.485], # Punto sulla linea di servizio SX (Non 6.40!)
+    [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 5.485], # Punto sulla linea di servizio DX
 ])
