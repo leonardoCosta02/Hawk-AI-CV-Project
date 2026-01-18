@@ -145,6 +145,6 @@ COURT_DIMENSIONS_METERS = {
 POINTS_WORLD_METERS = np.float32([
     [0.0, 0.0], # Angolo fondo-laterale SX
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # Angolo fondo-laterale DX
-    [0.0, 5.485], # Punto sulla linea di servizio SX (Non 6.40!)
+    [0.0, 5.485], # Punto sulla linea di servizio SX 
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 5.485], # Punto sulla linea di servizio DX
 ])
