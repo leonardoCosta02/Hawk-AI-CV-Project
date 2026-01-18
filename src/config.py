@@ -142,9 +142,10 @@ COURT_DIMENSIONS_METERS = {
 # Reference Keypoints in World Coordinates (Meters).
 # Used as 'dst_points' in cv2.findHomography().
 # Mapping represents the "Near Service Box" area.
+# In config.py - Modifica della scala Y per Module M3
 POINTS_WORLD_METERS = np.float32([
     [0.0, 0.0], # Angolo fondo-laterale SX
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 0.0], # Angolo fondo-laterale DX
-    [0.0, 5.485], # Punto sulla linea di servizio SX 
+    [0.0, 5.485], # Punto sulla linea di servizio SX (Corretto da 6.40)
     [COURT_DIMENSIONS_METERS['SINGOLO_LARGHEZZA'], 5.485], # Punto sulla linea di servizio DX
 ])
