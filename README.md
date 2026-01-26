@@ -10,4 +10,4 @@ About the files in the main directory:
 
 -"FINAL_JUDGE_video" ---> output video with the verdict IN/OUT
 
-In the directory data/ball_trajectory_videos there are the output videos after using YOLO for training and understanding its functionalities. They were taken from https://www.kaggle.com/datasets/gastonarielfrancois/tenis-backview?select=video9.mp4
+The data/ball_trajectory_videos directory contains the output videos after using YOLO for training and understanding its functionalities. They were taken from https://www.kaggle.com/datasets/gastonarielfrancois/tenis-backview?select=video9.mp4 
